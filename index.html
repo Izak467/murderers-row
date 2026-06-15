@@ -1112,7 +1112,7 @@ function getAwardBadgesHtml(player, year) {
   var rank = getMvpRank(player.name, year);
   if (rank === 1) {
     html += '<span class="award-badge award-mvp" title="MVP Winner">🏆1</span>';
-  } else if (rank <= 3) {
+  } else if (rank >= 2 && rank <= 3) {
     html += '<span class="award-badge award-mvp" title="MVP Top-3 Finisher">🏆</span>';
   }
   var ad = S.awardData;
