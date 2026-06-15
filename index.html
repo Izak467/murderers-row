@@ -244,7 +244,9 @@ body::before {
   padding: 1px 4px; line-height: 1.4;
 }
 .ls.filled .ls-pos { color: var(--gold); background: rgba(201,164,74,.1); }
-.ls-name { font-size: 9px; color: var(--cream); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 3px; font-weight: 600; }
+.ls-name { max-width: 100%; padding: 0 3px; text-align: center; }
+.ls-firstname { font-size: 8px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ls-lastname  { font-size: 9px; color: var(--cream); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ls-year { font-size: 8px; color: var(--muted); }
 .ls-empty { font-size: 18px; color: var(--border); margin-top: 2px; line-height: 1; }
 @keyframes slot-assigned {
@@ -857,7 +859,6 @@ body::before {
     <div class="result-record" id="result-record"></div>
     <div class="result-tagline" id="result-tagline"></div>
   </div>
-  <div class="score-insight" id="score-insight"></div>
 
   <!-- Firebase: streak + PB + percentile -->
   <div class="fb-stats-row" id="fb-stats-row" style="display:none">
@@ -1177,9 +1178,10 @@ function assignPlayer(player, posIdx) {
     void slots[posIdx].offsetWidth;
     slots[posIdx].classList.add('just-filled');
   }
-  // Clear roster immediately so user sees the spin without frozen content
-  S.loading = true; S.allPlayers = [];
-  renderRoster();
+  // Clear roster immediately — show nothing while slot machine spins
+  S.allPlayers = [];
+  document.getElementById('roster-title').innerHTML = '';
+  document.getElementById('roster-body').innerHTML = '';
   doSpin(null, null);
 }
 
@@ -1367,7 +1369,13 @@ function renderLineup() {
     html += '<div class="'+cls+'">';
     html += '<div class="ls-pos">'+POS[i]+'</div>';
     if (slot) {
-      html += '<div class="ls-name" title="'+slot.player.name+'">'+slot.player.name+'</div>';
+      var nameParts = slot.player.name.split(' ');
+      var firstName = nameParts.slice(0,-1).join(' ');
+      var lastName  = nameParts.slice(-1)[0];
+      html += '<div class="ls-name" title="'+slot.player.name+'">'
+        +'<div class="ls-firstname">'+firstName+'</div>'
+        +'<div class="ls-lastname">'+lastName+'</div>'
+        +'</div>';
       html += '<div class="ls-year">'+slot.year+'</div>';
       if (S.moveToken > 0 && S.movingSlotIdx === -1) {
         html += '<div class="ls-move-icon" onclick="activateMove('+i+')" title="Move this player to a different position">↔</div>';
@@ -1657,7 +1665,6 @@ function showResults() {
   var losses = 162 - res.wins;
   S.lastResult = res;
   saveToHistory(res.wins);
-  document.getElementById('score-insight').textContent = buildScoreInsight(res.norm);
 
   var rec = document.getElementById('result-record');
   rec.className = res.wins===162 ? 'result-record perfect' : res.wins>=110 ? 'result-record great' : 'result-record good';
