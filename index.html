@@ -458,6 +458,20 @@ body::before {
 .sb-val   { width: 52px; font-size: 11px; color: var(--cream-dim); text-align: right; }
 .sb-total { text-align: right; font-size: 12px; color: var(--muted); padding-top: 10px; border-top: 1px solid var(--border); margin-top: 6px; }
 .sb-total strong { color: var(--gold); font-size: 15px; }
+.agg-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding-top: 12px; margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.agg-chip {
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px; flex: 1; min-width: 52px;
+}
+.agg-chip-val { font-size: 15px; font-weight: 700; color: var(--cream); font-family: Georgia, serif; }
+.agg-chip-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-top: 2px; }
+.agg-chip.slash { min-width: 90px; }
+.agg-chip.slash .agg-chip-val { font-size: 13px; font-family: 'Courier New', monospace; color: #8ab8e0; }
 
 .fl-row {
   display: flex; align-items: center; gap: 14px;
@@ -837,6 +851,7 @@ body::before {
     <div class="card-header">Team Strength</div>
     <div class="bars-grid" id="bars-grid"></div>
     <div class="sb-total" id="sb-total"></div>
+    <div class="agg-row" id="agg-row"></div>
   </div>
 
   <!-- Firebase: leaderboard -->
@@ -1605,6 +1620,14 @@ function showResults() {
   }
   document.getElementById('bars-grid').innerHTML = barsHtml;
   document.getElementById('sb-total').innerHTML = 'Overall Strength: <strong>'+Math.round(res.strength*100)+'%</strong>';
+
+  var a = res.agg;
+  document.getElementById('agg-row').innerHTML =
+    '<div class="agg-chip slash"><div class="agg-chip-val">'+fmtSlash(a.avg)+'/'+fmtSlash(a.obp)+'/'+fmtSlash(a.slg)+'</div><div class="agg-chip-lbl">Slash Line</div></div>'
+    +'<div class="agg-chip"><div class="agg-chip-val">'+Math.round(a.hr)+'</div><div class="agg-chip-lbl">HR</div></div>'
+    +'<div class="agg-chip"><div class="agg-chip-val">'+Math.round(a.rbi)+'</div><div class="agg-chip-lbl">RBI</div></div>'
+    +'<div class="agg-chip"><div class="agg-chip-val">'+Math.round(a.runs)+'</div><div class="agg-chip-lbl">R</div></div>'
+    +'<div class="agg-chip"><div class="agg-chip-val">'+Math.round(a.sb)+'</div><div class="agg-chip-lbl">SB</div></div>';
 
   var flHtml = '';
   for (var r=0;r<9;r++) {
