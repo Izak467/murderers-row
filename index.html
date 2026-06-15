@@ -352,49 +352,94 @@ body::before {
 }
 .play-again-btn:hover { background: var(--gold-lt); }
 
+/* ─── Mobile player cards ──────────────────────────────────────── */
+.player-cards { display: flex; flex-direction: column; }
+.player-card {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.player-card:last-child { border-bottom: none; }
+.player-card.no-slots { opacity: .38; }
+.pc-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 7px;
+}
+.pc-name { font-weight: 700; font-size: 15px; color: var(--cream); }
+.pc-games { font-size: 11px; color: var(--muted); font-weight: 600; }
+.pc-stats {
+  display: flex; margin-bottom: 10px;
+  background: var(--bg); border-radius: 6px;
+  border: 1px solid var(--border); overflow: hidden;
+}
+.pc-stat {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 5px 3px; border-right: 1px solid var(--border);
+}
+.pc-stat:last-child { border-right: none; }
+.pc-stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.pc-stat-val { font-size: 13px; color: var(--cream-dim); font-weight: 700; margin-top: 2px; }
+.pc-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Mobile sort bar */
+.sort-bar {
+  display: flex; gap: 6px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: #0f1f38; overflow-x: auto;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.sort-bar::-webkit-scrollbar { display: none; }
+.sort-bar-btn {
+  padding: 5px 12px; font-size: 11px; font-weight: 700;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: transparent; color: var(--muted);
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: all .15s;
+}
+.sort-bar-btn.active { border-color: var(--gold-dk); color: var(--gold); background: rgba(201,164,74,.08); }
+
 @media (max-width: 640px) {
-  .lineup-bar  { grid-template-columns: repeat(5, 1fr); }
-  .bars-grid   { grid-template-columns: 1fr; }
-  .slot-machine { flex-direction: column; align-items: flex-start; gap: 10px; }
-
-  .wrap { padding: 0 10px 24px; gap: 16px; }
+  .wrap { padding: 0 10px 32px; gap: 14px; }
   .card { padding: 14px; }
-  .hero-title { letter-spacing: -2px; }
   .hero-sub { font-size: 13px; }
+  .bars-grid { grid-template-columns: 1fr; }
 
-  .game-topbar { flex-wrap: wrap; gap: 8px; padding-bottom: 10px; }
-  .slot-actions { flex-wrap: wrap; gap: 8px; }
-  .skip-btn { font-size: 11px; padding: 5px 10px; min-height: 36px; }
-
-  .roster-table th,
-  .roster-table td { padding: 7px 6px; font-size: 12px; }
-  .td-name { font-size: 12px; }
-  .td-pos  { min-width: 90px; }
-
-  .pos-assign-btn {
-    padding: 6px 10px; font-size: 11px;
-    min-height: 36px; min-width: 36px;
+  /* Lineup bar: horizontal scroll so all 9 slots stay visible */
+  .lineup-bar {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .lineup-bar::-webkit-scrollbar { display: none; }
+  .ls { min-width: 70px; flex-shrink: 0; min-height: 66px; }
+  .ls-pos  { font-size: 10px; }
+  .ls-name { font-size: 10px; }
 
-  .table-wrap {
-    /* shadow hints that table scrolls */
-    background:
-      linear-gradient(to right, var(--surface) 10px, transparent 10px),
-      linear-gradient(to left,  var(--surface) 10px, transparent 10px) 100% 0,
-      linear-gradient(to right, rgba(0,0,0,.35), transparent) 10px,
-      linear-gradient(to left,  rgba(0,0,0,.35), transparent) calc(100% - 10px);
-    background-size: 30px 100%, 30px 100%, 20px 100%, 20px 100%;
-    background-repeat: no-repeat;
-    background-attachment: local, local, scroll, scroll;
+  /* Game topbar */
+  .game-topbar { flex-wrap: wrap; gap: 8px; }
+  .move-token  { font-size: 12px; padding: 6px 12px; }
+
+  /* Slot machine */
+  .slot-machine { flex-direction: column; align-items: stretch; gap: 12px; }
+  .slot-displays { gap: 10px; }
+  .slot-win  { height: 54px; }
+  .slot-val  { font-size: 22px; }
+  .slot-val.team { font-size: 15px; }
+  #win-team  { min-width: 0; flex: 1; }
+  .slot-skip-row { display: flex; gap: 8px; }
+  .skip-btn  { flex: 1; text-align: center; min-height: 42px; font-size: 13px; padding: 8px 12px; }
+
+  /* Position buttons — thumb-friendly */
+  .pos-assign-btn {
+    min-height: 44px; min-width: 52px;
+    font-size: 13px; font-weight: 800;
+    padding: 8px 12px;
   }
 
   .fl-row { gap: 8px; }
   .fl-name { font-size: 13px; }
-}
-@media (max-width: 400px) {
-  .lineup-bar { grid-template-columns: repeat(3, 1fr); }
-  .roster-table th,
-  .roster-table td { padding: 6px 5px; font-size: 11px; }
 }
 </style>
 </head>
@@ -978,75 +1023,90 @@ function renderRoster() {
     + filterBtn
     + (S.movingSlotIdx !== -1 ? ' <span style="color:var(--gold);font-size:11px">— Move mode active</span>' : '');
 
-  function sortArrow(col) {
-    if (S.sort.col !== col) return '';
-    return '<span class="sort-arrow">↓</span>';
-  }
-  function thClick(col) {
-    return 'onclick="setSort(\''+col+'\')"';
-  }
+  var mobile = window.innerWidth <= 640;
 
-  var thead = '<thead><tr>'
-    + '<th '+thClick('name')+'>Player'+sortArrow('name')+'</th>'
-    + '<th '+thClick('games')+' class="'+(S.sort.col==='games'?'sorted':'')+'" style="text-align:right">G'+sortArrow('games')+'</th>'
-    + '<th '+thClick('ops')+' class="'+(S.sort.col==='ops'?'sorted':'')+'" style="text-align:right" title="Sort by OPS">OPS'+sortArrow('ops')+'</th>'
-    + '<th '+thClick('runs')+' class="'+(S.sort.col==='runs'?'sorted':'')+'" style="text-align:right">R'+sortArrow('runs')+'</th>'
-    + '<th '+thClick('hr')+' class="'+(S.sort.col==='hr'?'sorted':'')+'" style="text-align:right">HR'+sortArrow('hr')+'</th>'
-    + '<th '+thClick('rbi')+' class="'+(S.sort.col==='rbi'?'sorted':'')+'" style="text-align:right">RBI'+sortArrow('rbi')+'</th>'
-    + '<th '+thClick('tb')+' class="'+(S.sort.col==='tb'?'sorted':'')+'" style="text-align:right">TB'+sortArrow('tb')+'</th>'
-    + '<th '+thClick('sb')+' class="'+(S.sort.col==='sb'?'sorted':'')+'" style="text-align:right">SB'+sortArrow('sb')+'</th>'
-    + '<th>Assign To</th>'
-    + '</tr></thead>';
-
-  var rows = '';
-  for (var i=0;i<players.length;i++) {
-    var p  = players[i];
-    var st = p.stats;
-
-    // In move mode: only show the player being moved
-    if (movingPlayer && p.id !== movingPlayer.id) continue;
-
-    var btnHtml = '';
-    if (movingPlayer && p.id === movingPlayer.id) {
-      // Move mode: show only eligible open slots (no greyed ones needed)
-      var moveSlots = moveSlotsFor(p, S.movingSlotIdx);
-      for (var s=0;s<moveSlots.length;s++) {
-        btnHtml += '<button class="pos-assign-btn" onclick="onAssignClick('+i+','+moveSlots[s]+')">'+POS[moveSlots[s]]+'</button>';
-      }
-      if (!btnHtml) btnHtml = '<span style="font-size:10px;color:var(--muted)">No eligible open positions</span>';
-    } else {
-      // Normal mode: show all eligible positions; grey out filled ones
-      var eligSlots = eligibleSlotsFor(p);
-      for (var a=0;a<eligSlots.available.length;a++) {
-        btnHtml += '<button class="pos-assign-btn" onclick="onAssignClick('+i+','+eligSlots.available[a]+')">'+POS[eligSlots.available[a]]+'</button>';
-      }
-      for (var f=0;f<eligSlots.filled.length;f++) {
-        btnHtml += '<button class="pos-assign-btn pos-filled" disabled>'+POS[eligSlots.filled[f]]+'</button>';
-      }
-      if (!btnHtml) btnHtml = '<span style="font-size:10px;color:var(--muted)">—</span>';
+  if (mobile) {
+    // ── Mobile: card layout + sort bar ──────────────────────────
+    var sortDefs = [
+      {col:'games',lbl:'G'},{col:'ops',lbl:'OPS'},{col:'runs',lbl:'R'},
+      {col:'hr',lbl:'HR'},{col:'rbi',lbl:'RBI'},{col:'sb',lbl:'SB'}
+    ];
+    var sortBar = '<div class="sort-bar">';
+    for (var sc = 0; sc < sortDefs.length; sc++) {
+      sortBar += '<button class="sort-bar-btn'+(S.sort.col===sortDefs[sc].col?' active':'')+
+        '" onclick="setSort(\''+sortDefs[sc].col+'\')">'+sortDefs[sc].lbl+'</button>';
     }
+    sortBar += '</div>';
 
-    var hasAvail = movingPlayer ? true : eligibleSlotsFor(p).available.length > 0;
-    var rowCls   = hasAvail ? '' : 'no-slots';
+    var cards = '';
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i]; var st = p.stats;
+      if (movingPlayer && p.id !== movingPlayer.id) continue;
+      var btnHtml = buildBtnHtml(p, i, movingPlayer);
+      var hasAvail = movingPlayer ? true : eligibleSlotsFor(p).available.length > 0;
+      cards += '<div class="player-card'+(hasAvail?'':' no-slots')+'">'
+        + '<div class="pc-top"><div class="pc-name">'+p.name+'</div><div class="pc-games">'+st.games+'G</div></div>'
+        + '<div class="pc-stats">'
+        + '<div class="pc-stat"><div class="pc-stat-lbl">OPS</div><div class="pc-stat-val">'+fmtSlash(st.obp+st.slg)+'</div></div>'
+        + '<div class="pc-stat"><div class="pc-stat-lbl">R</div><div class="pc-stat-val">'+st.runs+'</div></div>'
+        + '<div class="pc-stat"><div class="pc-stat-lbl">HR</div><div class="pc-stat-val">'+st.hr+'</div></div>'
+        + '<div class="pc-stat"><div class="pc-stat-lbl">RBI</div><div class="pc-stat-val">'+st.rbi+'</div></div>'
+        + '<div class="pc-stat"><div class="pc-stat-lbl">SB</div><div class="pc-stat-val">'+st.sb+'</div></div>'
+        + '</div>'
+        + '<div class="pc-buttons">'+btnHtml+'</div>'
+        + '</div>';
+    }
+    body.innerHTML = sortBar + '<div class="player-cards">'+cards+'</div>';
 
-    rows += '<tr class="'+rowCls+'">'
-      + '<td class="td-name">'+p.name+'</td>'
-      + '<td class="td-num">'+st.games+'</td>'
-      + '<td class="td-num">'+fmtSlash(st.obp+st.slg)+'</td>'
-      + '<td class="td-num">'+st.runs+'</td>'
-      + '<td class="td-num">'+st.hr+'</td>'
-      + '<td class="td-num">'+st.rbi+'</td>'
-      + '<td class="td-num">'+st.tb+'</td>'
-      + '<td class="td-num">'+st.sb+'</td>'
-      + '<td class="td-pos">'+btnHtml+'</td>'
-      + '</tr>';
+  } else {
+    // ── Desktop: table layout ────────────────────────────────────
+    function sortArrow(col) {
+      return S.sort.col !== col ? '' : '<span class="sort-arrow">↓</span>';
+    }
+    function thClick(col) {
+      return 'onclick="setSort(\''+col+'\')"';
+    }
+    var thead = '<thead><tr>'
+      + '<th '+thClick('name')+'>Player'+sortArrow('name')+'</th>'
+      + '<th '+thClick('games')+' class="'+(S.sort.col==='games'?'sorted':'')+'" style="text-align:right">G'+sortArrow('games')+'</th>'
+      + '<th '+thClick('ops')+' class="'+(S.sort.col==='ops'?'sorted':'')+'" style="text-align:right">OPS'+sortArrow('ops')+'</th>'
+      + '<th '+thClick('runs')+' class="'+(S.sort.col==='runs'?'sorted':'')+'" style="text-align:right">R'+sortArrow('runs')+'</th>'
+      + '<th '+thClick('hr')+' class="'+(S.sort.col==='hr'?'sorted':'')+'" style="text-align:right">HR'+sortArrow('hr')+'</th>'
+      + '<th '+thClick('rbi')+' class="'+(S.sort.col==='rbi'?'sorted':'')+'" style="text-align:right">RBI'+sortArrow('rbi')+'</th>'
+      + '<th '+thClick('tb')+' class="'+(S.sort.col==='tb'?'sorted':'')+'" style="text-align:right">TB'+sortArrow('tb')+'</th>'
+      + '<th '+thClick('sb')+' class="'+(S.sort.col==='sb'?'sorted':'')+'" style="text-align:right">SB'+sortArrow('sb')+'</th>'
+      + '<th>Assign To</th>'
+      + '</tr></thead>';
+
+    var rows = '';
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i]; var st = p.stats;
+      if (movingPlayer && p.id !== movingPlayer.id) continue;
+      var btnHtml = buildBtnHtml(p, i, movingPlayer);
+      var hasAvail = movingPlayer ? true : eligibleSlotsFor(p).available.length > 0;
+      rows += '<tr class="'+(hasAvail?'':'no-slots')+'">'
+        + '<td class="td-name">'+p.name+'</td>'
+        + '<td class="td-num">'+st.games+'</td>'
+        + '<td class="td-num">'+fmtSlash(st.obp+st.slg)+'</td>'
+        + '<td class="td-num">'+st.runs+'</td>'
+        + '<td class="td-num">'+st.hr+'</td>'
+        + '<td class="td-num">'+st.rbi+'</td>'
+        + '<td class="td-num">'+st.tb+'</td>'
+        + '<td class="td-num">'+st.sb+'</td>'
+        + '<td class="td-pos">'+btnHtml+'</td>'
+        + '</tr>';
+    }
+    body.innerHTML = '<div class="table-wrap"><table class="roster-table">'+thead+'<tbody>'+rows+'</tbody></table></div>';
   }
-
-  body.innerHTML = '<div class="table-wrap"><table class="roster-table">'+thead+'<tbody>'+rows+'</tbody></table></div>';
 
   // Store sorted players reference for click handler
   window._sortedPlayers = players;
 }
+
+// Re-render roster on orientation change so mobile/desktop layout switches correctly
+window.addEventListener('resize', function() {
+  if (S.spin && !S.loading && !S.spinning) renderRoster();
+});
 
 function onAssignClick(playerIdx, posIdx) {
   var player = window._sortedPlayers[playerIdx];
@@ -1056,6 +1116,27 @@ function onAssignClick(playerIdx, posIdx) {
   } else {
     assignPlayer(player, posIdx);
   }
+}
+
+function buildBtnHtml(p, i, movingPlayer) {
+  var btnHtml = '';
+  if (movingPlayer && p.id === movingPlayer.id) {
+    var moveSlots = moveSlotsFor(p, S.movingSlotIdx);
+    for (var s = 0; s < moveSlots.length; s++) {
+      btnHtml += '<button class="pos-assign-btn" onclick="onAssignClick('+i+','+moveSlots[s]+')">'+POS[moveSlots[s]]+'</button>';
+    }
+    if (!btnHtml) btnHtml = '<span style="font-size:11px;color:var(--muted)">No eligible open positions</span>';
+  } else {
+    var eligSlots = eligibleSlotsFor(p);
+    for (var a = 0; a < eligSlots.available.length; a++) {
+      btnHtml += '<button class="pos-assign-btn" onclick="onAssignClick('+i+','+eligSlots.available[a]+')">'+POS[eligSlots.available[a]]+'</button>';
+    }
+    for (var f = 0; f < eligSlots.filled.length; f++) {
+      btnHtml += '<button class="pos-assign-btn pos-filled" disabled>'+POS[eligSlots.filled[f]]+'</button>';
+    }
+    if (!btnHtml) btnHtml = '<span style="font-size:11px;color:var(--muted)">—</span>';
+  }
+  return btnHtml;
 }
 
 function toggleAvailableFilter() {
