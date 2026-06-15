@@ -15,6 +15,104 @@
 <meta name="twitter:image" content="https://d8j0ntlcm91z4.cloudfront.net/user_3EuBEdMKRmkoyzkyMTUsq6xoneU/hf_20260615_151702_4085e95f-6080-4740-80b8-2676a5a188eb.png">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, query, where, orderBy, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDADra-ckABsD_EbRq5ZkEeHvN5bkp5Z4E",
+    authDomain: "murderers-row.firebaseapp.com",
+    projectId: "murderers-row",
+    storageBucket: "murderers-row.firebasestorage.app",
+    messagingSenderId: "927435369451",
+    appId: "1:927435369451:web:73cbbaec657c7da18bc7ae"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // ── Anonymous sign-in ────────────────────────────────────────
+  signInAnonymously(auth).catch(function(e) { console.warn('Auth error', e); });
+
+  onAuthStateChanged(auth, function(user) {
+    if (user) { window._fbUid = user.uid; }
+  });
+
+  // ── Save a score ─────────────────────────────────────────────
+  window._fbSaveScore = async function(wins, lineupSummary) {
+    if (!window._fbUid) return;
+    var today = new Date();
+    var dateStr = today.getFullYear() + '-' +
+      String(today.getMonth()+1).padStart(2,'0') + '-' +
+      String(today.getDate()).padStart(2,'0');
+
+    // Save to scores collection
+    await addDoc(collection(db, 'scores'), {
+      uid:       window._fbUid,
+      date:      dateStr,
+      wins:      wins,
+      lineup:    lineupSummary,
+      ts:        Date.now()
+    });
+
+    // Update personal best
+    var pbRef = doc(db, 'users', window._fbUid);
+    var pbSnap = await getDoc(pbRef);
+    var oldPB = pbSnap.exists() ? (pbSnap.data().pb || 0) : 0;
+    var oldStreak = pbSnap.exists() ? (pbSnap.data().streak || 0) : 0;
+    var lastDate  = pbSnap.exists() ? (pbSnap.data().lastDate || '') : '';
+
+    // Streak logic
+    var yesterday = new Date(today); yesterday.setDate(yesterday.getDate()-1);
+    var yStr = yesterday.getFullYear() + '-' +
+      String(yesterday.getMonth()+1).padStart(2,'0') + '-' +
+      String(yesterday.getDate()).padStart(2,'0');
+    var newStreak = (lastDate === yStr || lastDate === dateStr) ? (lastDate === dateStr ? oldStreak : oldStreak + 1) : 1;
+    var newPB     = Math.max(oldPB, wins);
+
+    await setDoc(pbRef, { pb: newPB, streak: newStreak, lastDate: dateStr }, { merge: true });
+
+    return { isNewPB: wins > oldPB, streak: newStreak, pb: newPB };
+  };
+
+  // ── Get today's leaderboard + percentile ─────────────────────
+  window._fbGetTodayStats = async function(myWins) {
+    var today = new Date();
+    var dateStr = today.getFullYear() + '-' +
+      String(today.getMonth()+1).padStart(2,'0') + '-' +
+      String(today.getDate()).padStart(2,'0');
+
+    var q = query(collection(db, 'scores'), where('date','==',dateStr), orderBy('wins','desc'));
+    var snap = await getDocs(q);
+    var scores = [];
+    snap.forEach(function(d) { scores.push(d.data()); });
+
+    var total = scores.length;
+    var below = scores.filter(function(s) { return s.wins < myWins; }).length;
+    var percentile = total > 1 ? Math.round((below / (total-1)) * 100) : 100;
+    var rank = scores.filter(function(s) { return s.wins > myWins; }).length + 1;
+
+    // Top 10 unique users by best score today
+    var seen = {};
+    var top10 = [];
+    for (var i=0; i<scores.length; i++) {
+      var s = scores[i];
+      if (!seen[s.uid]) { seen[s.uid] = true; top10.push(s); }
+      if (top10.length >= 10) break;
+    }
+
+    return { percentile: percentile, rank: rank, total: total, top10: top10 };
+  };
+
+  // ── Get user profile (streak + PB) ───────────────────────────
+  window._fbGetProfile = async function() {
+    if (!window._fbUid) return null;
+    var snap = await getDoc(doc(db, 'users', window._fbUid));
+    return snap.exists() ? snap.data() : { pb: 0, streak: 0 };
+  };
+</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -408,6 +506,17 @@ body::before {
 .history-date  { color: var(--muted); font-size: 11px; }
 .game-credit   { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: .5px; padding-top: 4px; }
 
+/* ─── Landing Firebase strip ───────────────────────────────────── */
+.landing-fb-strip {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 20px;
+}
+.lfs-item { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+.lfs-val { font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: var(--gold); }
+.lfs-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+.lfs-divider { width: 1px; height: 36px; background: var(--border); margin: 0 10px; }
+
 /* ─── Rules modal ──────────────────────────────────────────────── */
 .rules-btn {
   width: 28px; height: 28px; border-radius: 50%;
@@ -445,6 +554,49 @@ body::before {
   padding: 10px 16px; border-bottom: 1px solid var(--border);
   font-style: italic;
 }
+
+/* ─── Firebase stats row ───────────────────────────────────────── */
+.fb-stats-row {
+  display: flex; gap: 10px;
+}
+.fb-stat-box {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 10px; text-align: center;
+}
+.fb-stat-val {
+  font-family: Georgia, serif; font-size: 28px; font-weight: 700;
+  color: var(--cream); line-height: 1;
+}
+.fb-stat-lbl {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--muted); margin-top: 5px;
+}
+.fb-pct-box { border-color: var(--gold-dk); background: rgba(201,164,74,.06); }
+.fb-pct-box .fb-stat-val { color: var(--gold); }
+
+.pb-banner {
+  text-align: center; background: rgba(201,164,74,.12);
+  border: 1px solid var(--gold-dk); border-radius: 8px;
+  padding: 10px; font-size: 15px; font-weight: 700; color: var(--gold);
+  animation: pb-pop .4s cubic-bezier(.17,.67,.42,1.4);
+}
+@keyframes pb-pop {
+  0%   { transform: scale(.85); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ─── Leaderboard ──────────────────────────────────────────────── */
+.lb-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0; border-bottom: 1px solid #1a3050; font-size: 13px;
+}
+.lb-row:last-child { border-bottom: none; }
+.lb-rank { width: 24px; font-size: 11px; color: var(--muted); font-weight: 700; text-align: center; }
+.lb-rank.top3 { color: var(--gold); font-size: 14px; }
+.lb-wins { font-family: Georgia, serif; font-size: 17px; font-weight: 700; color: var(--cream); min-width: 60px; }
+.lb-lineup { flex: 1; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-row.my-row { background: rgba(201,164,74,.07); border-radius: 6px; padding: 8px 6px; margin: 0 -6px; }
+.lb-row.my-row .lb-wins { color: var(--gold); }
 
 /* ─── Player spotlight toast ───────────────────────────────────── */
 .spotlight-toast {
@@ -571,6 +723,12 @@ body::before {
     <button class="challenge-btn" onclick="startDailyChallenge()">⚾ Today's Challenge</button>
   </div>
 
+  <div id="landing-fb-strip" style="display:none" class="landing-fb-strip">
+    <div class="lfs-item"><span class="lfs-val" id="lfs-streak">—</span><span class="lfs-lbl">Streak</span></div>
+    <div class="lfs-divider"></div>
+    <div class="lfs-item"><span class="lfs-val" id="lfs-pb">—</span><span class="lfs-lbl">Best Season</span></div>
+  </div>
+
   <div class="card history-card" id="history-card">
     <div id="history-section"></div>
   </div>
@@ -657,11 +815,36 @@ body::before {
     <div class="result-tagline" id="result-tagline"></div>
   </div>
   <div class="score-insight" id="score-insight"></div>
+
+  <!-- Firebase: streak + PB + percentile -->
+  <div class="fb-stats-row" id="fb-stats-row" style="display:none">
+    <div class="fb-stat-box" id="fb-streak-box">
+      <div class="fb-stat-val" id="fb-streak-val">—</div>
+      <div class="fb-stat-lbl">Day Streak</div>
+    </div>
+    <div class="fb-stat-box fb-pct-box" id="fb-pct-box">
+      <div class="fb-stat-val" id="fb-pct-val">—</div>
+      <div class="fb-stat-lbl" id="fb-pct-lbl">Better Than</div>
+    </div>
+    <div class="fb-stat-box" id="fb-pb-box">
+      <div class="fb-stat-val" id="fb-pb-val">—</div>
+      <div class="fb-stat-lbl">Personal Best</div>
+    </div>
+  </div>
+  <div id="fb-pb-banner" style="display:none" class="pb-banner">🏆 New Personal Best!</div>
+
   <div class="card">
     <div class="card-header">Team Strength</div>
     <div class="bars-grid" id="bars-grid"></div>
     <div class="sb-total" id="sb-total"></div>
   </div>
+
+  <!-- Firebase: leaderboard -->
+  <div class="card" id="fb-leaderboard-card" style="display:none">
+    <div class="card-header">Today's Leaderboard</div>
+    <div id="fb-leaderboard-body"></div>
+  </div>
+
   <div class="card">
     <div class="card-header">Final Lineup</div>
     <div id="fl-rows"></div>
@@ -1436,6 +1619,65 @@ function showResults() {
       +'</div>';
   }
   document.getElementById('fl-rows').innerHTML = flHtml;
+
+  // ── Firebase: save score + load stats ──────────────────────────
+  var lineupSummary = S.lineup.filter(Boolean).map(function(sl) {
+    return sl.player.name.split(' ').slice(-1)[0] + ' \'' + String(sl.year).slice(2);
+  }).join(', ');
+
+  if (typeof window._fbSaveScore === 'function') {
+    window._fbSaveScore(res.wins, lineupSummary).then(function(pb) {
+      if (!pb) return;
+
+      // Streak + PB boxes
+      document.getElementById('fb-streak-val').textContent = pb.streak + (pb.streak === 1 ? ' 🔥' : ' 🔥');
+      document.getElementById('fb-pb-val').textContent = pb.pb + '-' + (162 - pb.pb);
+      document.getElementById('fb-stats-row').style.display = 'flex';
+
+      // New PB banner
+      if (pb.isNewPB && pb.pb > 0) {
+        document.getElementById('fb-pb-banner').style.display = 'block';
+      }
+
+      // Percentile + leaderboard
+      return window._fbGetTodayStats(res.wins);
+    }).then(function(stats) {
+      if (!stats) return;
+      document.getElementById('fb-pct-val').textContent = stats.total < 2 ? '—' : stats.percentile + '%';
+      document.getElementById('fb-pct-lbl').textContent = stats.total < 2 ? 'First Today!' : 'Better Than Today';
+
+      // Leaderboard
+      if (stats.top10.length > 0) {
+        var myUid = window._fbUid;
+        var medals = ['🥇','🥈','🥉'];
+        var lbHtml = '';
+        for (var i = 0; i < stats.top10.length; i++) {
+          var s = stats.top10[i];
+          var isMe = s.uid === myUid;
+          var rankLabel = i < 3 ? medals[i] : (i+1);
+          lbHtml += '<div class="lb-row'+(isMe?' my-row':'')+'">'
+            +'<div class="lb-rank'+(i<3?' top3':'')+'">'+rankLabel+'</div>'
+            +'<div class="lb-wins">'+(s.wins)+'-'+(162-s.wins)+'</div>'
+            +'<div class="lb-lineup">'+(isMe ? '<strong style="color:var(--gold-lt)">You</strong> · ' : '')+s.lineup+'</div>'
+            +'</div>';
+        }
+        document.getElementById('fb-leaderboard-body').innerHTML = lbHtml;
+        document.getElementById('fb-leaderboard-card').style.display = 'block';
+      }
+    }).catch(function(e) { console.warn('Firebase stats error', e); });
+  }
+
+  // Load streak/PB even without a new score (e.g. page reload)
+  if (typeof window._fbGetProfile === 'function') {
+    window._fbGetProfile().then(function(profile) {
+      if (!profile) return;
+      if (document.getElementById('fb-stats-row').style.display === 'none') {
+        document.getElementById('fb-streak-val').textContent = (profile.streak||0) + ' 🔥';
+        document.getElementById('fb-pb-val').textContent = profile.pb ? profile.pb+'-'+(162-profile.pb) : '—';
+        document.getElementById('fb-stats-row').style.display = 'flex';
+      }
+    }).catch(function(){});
+  }
 }
 
 // ─── Screen Mgmt ─────────────────────────────────────────────────────────────
@@ -1443,7 +1685,26 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-'+name).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  if (name === 'landing') renderHistory();
+  if (name === 'landing') {
+    renderHistory();
+    loadLandingFbStrip();
+  }
+}
+
+function loadLandingFbStrip() {
+  if (typeof window._fbGetProfile !== 'function') {
+    // Firebase not ready yet — retry in 1s
+    setTimeout(loadLandingFbStrip, 1000);
+    return;
+  }
+  window._fbGetProfile().then(function(profile) {
+    if (!profile) return;
+    var streak = profile.streak || 0;
+    var pb     = profile.pb    || 0;
+    document.getElementById('lfs-streak').textContent = streak + (streak > 0 ? ' 🔥' : '');
+    document.getElementById('lfs-pb').textContent     = pb ? pb + '-' + (162-pb) : '—';
+    document.getElementById('landing-fb-strip').style.display = 'flex';
+  }).catch(function(){});
 }
 
 // ─── Sound ───────────────────────────────────────────────────────────────────
