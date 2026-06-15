@@ -41,15 +41,16 @@
   });
 
   // ── Save a score ─────────────────────────────────────────────
-  window._fbSaveScore = async function(wins, lineupSummary) {
+  window._fbSaveScore = async function(wins, lineupSummary, coll) {
     if (!window._fbUid) return;
+    coll = coll || 'scores';
     var today = new Date();
     var dateStr = today.getFullYear() + '-' +
       String(today.getMonth()+1).padStart(2,'0') + '-' +
       String(today.getDate()).padStart(2,'0');
 
     // Save to scores collection
-    await addDoc(collection(db, 'scores'), {
+    await addDoc(collection(db, coll), {
       uid:       window._fbUid,
       date:      dateStr,
       wins:      wins,
@@ -78,13 +79,14 @@
   };
 
   // ── Get today's leaderboard + percentile ─────────────────────
-  window._fbGetTodayStats = async function(myWins) {
+  window._fbGetTodayStats = async function(myWins, coll) {
+    coll = coll || 'scores';
     var today = new Date();
     var dateStr = today.getFullYear() + '-' +
       String(today.getMonth()+1).padStart(2,'0') + '-' +
       String(today.getDate()).padStart(2,'0');
 
-    var q = query(collection(db, 'scores'), where('date','==',dateStr), orderBy('wins','desc'));
+    var q = query(collection(db, coll), where('date','==',dateStr), orderBy('wins','desc'));
     var snap = await getDocs(q);
     var scores = [];
     snap.forEach(function(d) { scores.push(d.data()); });
@@ -672,6 +674,20 @@ body::before {
 .pr-stat-lbl { font-size: 9px; color: var(--muted); font-weight: 700; text-transform: uppercase; }
 .pr-stat-ops { border-color: var(--border-lt); color: #8ab8e0; }
 
+/* ── Mode selector ── */
+.mode-selector { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
+.mode-btn {
+  padding: 8px 22px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: transparent;
+  color: var(--cream-dim); font-size: 13px; cursor: pointer; transition: all 0.15s;
+}
+.mode-btn.active {
+  border-color: var(--gold); color: var(--gold); background: rgba(201,164,74,0.12);
+}
+.mode-btn.active.hard-mode-btn {
+  border-color: #c05050; color: #f08080; background: rgba(192,80,80,0.12);
+}
+
 /* Award badges */
 .pr-award-badges { display: inline-flex; align-items: center; gap: 2px; margin-left: 5px; vertical-align: middle; }
 .award-badge {
@@ -768,6 +784,10 @@ body::before {
   </div>
 
   <div class="landing-btns">
+    <div class="mode-selector">
+      <button class="mode-btn active" id="mode-normal" onclick="selectMode('normal')">Normal</button>
+      <button class="mode-btn hard-mode-btn" id="mode-hard" onclick="selectMode('hard')">☠ Hard Mode</button>
+    </div>
     <button class="start-btn" onclick="startGame()">Start Game</button>
   </div>
 
@@ -789,6 +809,7 @@ body::before {
 
   <div class="game-topbar">
     <div class="round-chip">Round <strong id="round-num">1</strong> of 9</div>
+    <span id="hm-topbar" style="display:none;background:rgba(180,60,60,0.22);border:1px solid rgba(220,80,80,0.5);color:#f08080;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:1.5px">☠ HARD</span>
     <div class="move-token available" id="move-token-badge" title="Use this to move an already-placed player to a different eligible position">↔ Move Token: <span id="move-token-txt">1 left</span></div>
     <button class="rules-btn" onclick="toggleRulesModal()" title="How to play">?</button>
   </div>
@@ -858,6 +879,9 @@ body::before {
 
 <!-- ═══════════ RESULTS ═══════════ -->
 <div id="screen-results" class="screen">
+  <div id="hard-mode-badge" style="display:none;text-align:center;padding:8px 0 4px">
+    <span style="background:rgba(180,60,60,0.22);border:1px solid rgba(220,80,80,0.55);color:#f08080;padding:4px 16px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:2px">☠ HARD MODE</span>
+  </div>
   <div class="results-hero">
     <div class="result-record" id="result-record"></div>
     <div class="result-tagline" id="result-tagline"></div>
@@ -889,7 +913,7 @@ body::before {
 
   <!-- Firebase: leaderboard -->
   <div class="card" id="fb-leaderboard-card" style="display:none">
-    <div class="card-header">Leaderboard</div>
+    <div class="card-header" id="fb-leaderboard-title">Leaderboard</div>
     <div id="fb-leaderboard-body"></div>
   </div>
 
@@ -1116,6 +1140,7 @@ var S = {
   recentTeams:  [],   // last 3 team IDs used — excluded from random picks
   pendingAssign: null, // { playerIdx, posIdx, playerName, posName }
   awardData:    null, // { ss: {playerId: true} } — fetched per round
+  hardMode:     false,
 };
 
 function teamLogoUrl(abbr) {
@@ -1257,6 +1282,29 @@ function pick(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
 function sleep(ms) { return new Promise(function(r){setTimeout(r,ms);}); }
 function busy() { return S.spinning || S.loading; }
 function fmtSlash(n) { return n ? n.toFixed(3).replace(/^0\./,'.') : '.---'; }
+
+// ─── Mode selector ────────────────────────────────────────────────────────────
+var _selectedMode = 'normal';
+function selectMode(m) {
+  _selectedMode = m;
+  document.getElementById('mode-normal').classList.toggle('active', m === 'normal');
+  document.getElementById('mode-hard').classList.toggle('active', m === 'hard');
+}
+
+// ─── Stat color tint (Excel-style red→yellow→green gradient) ─────────────────
+function statTint(value, floor, mid, ceil) {
+  var clamped = Math.max(floor, Math.min(ceil, +value || 0));
+  var RED = [220, 70, 70], YEL = [210, 185, 50], GRN = [50, 175, 80];
+  var rgb, t;
+  if (clamped <= mid) {
+    t = (mid === floor) ? 1 : (clamped - floor) / (mid - floor);
+    rgb = [Math.round(RED[0]+(YEL[0]-RED[0])*t), Math.round(RED[1]+(YEL[1]-RED[1])*t), Math.round(RED[2]+(YEL[2]-RED[2])*t)];
+  } else {
+    t = (ceil === mid) ? 1 : (clamped - mid) / (ceil - mid);
+    rgb = [Math.round(YEL[0]+(GRN[0]-YEL[0])*t), Math.round(YEL[1]+(GRN[1]-YEL[1])*t), Math.round(YEL[2]+(GRN[2]-YEL[2])*t)];
+  }
+  return 'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',0.38)';
+}
 
 function isEligibleAt(player, pos) {
   return pos === 'DH' ? player.stats.games >= 15 : player.positions.indexOf(pos) !== -1;
@@ -1667,14 +1715,15 @@ function renderRoster() {
         + '<div class="pr-name">'+p.name+(badges?'<span class="pr-award-badges">'+badges+'</span>':'')+'</div>'
         + '<div class="pr-btns">'+btnHtml+'</div>'
         + '</div>'
-        + '<div class="pr-stats">'
-        + '<span class="pr-stat-pill pr-stat-g"><span class="pr-stat-lbl">G</span>'+st.games+'</span>'
-        + '<span class="pr-stat-pill pr-stat-ops"><span class="pr-stat-lbl">OPS</span>'+fmtSlash(st.obp+st.slg)+'</span>'
-        + '<span class="pr-stat-pill"><span class="pr-stat-lbl">R</span>'+st.runs+'</span>'
-        + '<span class="pr-stat-pill"><span class="pr-stat-lbl">HR</span>'+st.hr+'</span>'
-        + '<span class="pr-stat-pill"><span class="pr-stat-lbl">RBI</span>'+st.rbi+'</span>'
-        + '<span class="pr-stat-pill"><span class="pr-stat-lbl">SB</span>'+st.sb+'</span>'
-        + '</div>'
+        + (S.hardMode ? '' :
+          '<div class="pr-stats">'
+          + '<span class="pr-stat-pill pr-stat-g" style="background:'+statTint(st.games,40,110,162)+'"><span class="pr-stat-lbl">G</span>'+st.games+'</span>'
+          + '<span class="pr-stat-pill pr-stat-ops" style="background:'+statTint(st.obp+st.slg,0.640,0.790,0.960)+'"><span class="pr-stat-lbl">OPS</span>'+fmtSlash(st.obp+st.slg)+'</span>'
+          + '<span class="pr-stat-pill" style="background:'+statTint(st.runs,25,60,100)+'"><span class="pr-stat-lbl">R</span>'+st.runs+'</span>'
+          + '<span class="pr-stat-pill" style="background:'+statTint(st.hr,0,15,40)+'"><span class="pr-stat-lbl">HR</span>'+st.hr+'</span>'
+          + '<span class="pr-stat-pill" style="background:'+statTint(st.rbi,20,60,105)+'"><span class="pr-stat-lbl">RBI</span>'+st.rbi+'</span>'
+          + '<span class="pr-stat-pill" style="background:'+statTint(st.sb,0,10,30)+'"><span class="pr-stat-lbl">SB</span>'+st.sb+'</span>'
+          + '</div>')
         + (isPendingRow ? buildConfirmBar() : '')
         + '</div>';
     }
@@ -1819,6 +1868,7 @@ function showResults() {
 
   var rec = document.getElementById('result-record');
   rec.className = res.wins===162 ? 'result-record perfect' : res.wins>=110 ? 'result-record great' : 'result-record good';
+  document.getElementById('hard-mode-badge').style.display = S.hardMode ? 'block' : 'none';
 
   // Animate win count up like a scoreboard
   var counter = { val: 0 };
@@ -1923,7 +1973,8 @@ function showResults() {
   }).join(', ');
 
   if (typeof window._fbSaveScore === 'function') {
-    window._fbSaveScore(res.wins, lineupSummary).then(function(pb) {
+    var _fbColl = S.hardMode ? 'hardScores' : 'scores';
+    window._fbSaveScore(res.wins, lineupSummary, _fbColl).then(function(pb) {
       if (!pb) return;
 
       // Streak + PB boxes
@@ -1937,7 +1988,7 @@ function showResults() {
       }
 
       // Percentile + leaderboard
-      return window._fbGetTodayStats(res.wins);
+      return window._fbGetTodayStats(res.wins, _fbColl);
     }).then(function(stats) {
       if (!stats) return;
       document.getElementById('fb-pct-val').textContent = stats.total < 2 ? '—' : stats.percentile + '%';
@@ -1959,6 +2010,7 @@ function showResults() {
             +'</div>';
         }
         document.getElementById('fb-leaderboard-body').innerHTML = lbHtml;
+        document.getElementById('fb-leaderboard-title').textContent = S.hardMode ? '☠ Hard Mode Leaderboard' : 'Leaderboard';
         document.getElementById('fb-leaderboard-card').style.display = 'block';
       }
     }).catch(function(e) { console.warn('Firebase stats error', e); });
@@ -2114,9 +2166,12 @@ function startGame(lockTeamId, lockYear) {
   S.skips={team:1,year:1}; S.spin=null; S.allPlayers=[]; S.loadError=null;
   S.spinning=false; S.loading=false; S.sort={col:'games',dir:'desc'};
   S.moveToken=1; S.movingSlotIdx=-1; S.recentYears=[]; S.recentTeams=[]; S.availableOnly=false;
+  S.hardMode = (_selectedMode === 'hard');
 
   showScreen('game');
   document.getElementById('round-num').textContent = '1';
+  var hmEl = document.getElementById('hm-topbar');
+  if (hmEl) hmEl.style.display = S.hardMode ? 'inline-flex' : 'none';
   renderLineup();
   renderMoveToken();
   refreshSkipBtns();
