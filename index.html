@@ -537,7 +537,7 @@ body::before {
       <li>Fill all 9 slots: <strong>C · 1B · 2B · 3B · SS · LF · CF · RF · DH</strong>.</li>
       <li>Filled slots are locked. You have <strong>two Move tokens</strong> to reassign placed players to different eligible positions.</li>
       <li>You also have <strong>one team skip</strong> and <strong>one year skip</strong> per game.</li>
-      <li>Lineup is scored on <strong>AVG / OBP / SLG + HR, RBI, R, TB, SB</strong>. The win curve is brutal — 162-0 requires excellence in every category.</li>
+      <li>Lineup is scored on <strong>AVG / OBP / SLG + HR, RBI, R, SB</strong>. Rate stats are adjusted for era and games played — a full season in a pitcher's park counts differently than 60 games in 2006. The win curve is brutal — 162-0 requires excellence in every category.</li>
     </ul>
   </div>
 
@@ -688,9 +688,24 @@ var API   = 'https://statsapi.mlb.com/api/v1';
 var POS   = ['C','1B','2B','3B','SS','LF','CF','RF','DH'];
 var YEARS = [2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2021,2022,2023,2024,2025];
 
-var W     = { avg:.12, obp:.14, slg:.14, hr:.18, rbi:.13, runs:.10, tb:.12, sb:.07 };
-var CEIL  = { avg:.330, obp:.420, slg:.580, hr:295, rbi:980, runs:880, tb:2650, sb:240 };
-var FLOOR = { avg:.195, obp:.265, slg:.325, hr:0,   rbi:0,   runs:0,  tb:0,    sb:0   };
+// Scoring weights — AVG/OBP/SLG are rate stats (lineup avg), HR/RBI/R/SB are counting (summed)
+var W     = { avg:.10, obp:.22, slg:.20, hr:.18, rbi:.14, runs:.10, sb:.06 };
+var CEIL  = { avg:.290, obp:.375, slg:.480, hr:265, rbi:880, runs:840, sb:210 };
+var FLOOR = { avg:.220, obp:.290, slg:.340, hr:30,  rbi:300, runs:300, sb:0   };
+
+// MLB league averages by season — rate stats used for durability-adjusted normalization
+var SEASON_AVG = {
+  2005:{avg:.264,obp:.330,slg:.421}, 2006:{avg:.269,obp:.334,slg:.432},
+  2007:{avg:.268,obp:.332,slg:.423}, 2008:{avg:.264,obp:.331,slg:.416},
+  2009:{avg:.262,obp:.332,slg:.418}, 2010:{avg:.257,obp:.325,slg:.403},
+  2011:{avg:.255,obp:.321,slg:.399}, 2012:{avg:.255,obp:.320,slg:.405},
+  2013:{avg:.253,obp:.318,slg:.396}, 2014:{avg:.251,obp:.314,slg:.386},
+  2015:{avg:.254,obp:.317,slg:.405}, 2016:{avg:.255,obp:.322,slg:.417},
+  2017:{avg:.255,obp:.326,slg:.426}, 2018:{avg:.248,obp:.318,slg:.409},
+  2019:{avg:.252,obp:.323,slg:.435}, 2021:{avg:.244,obp:.317,slg:.411},
+  2022:{avg:.243,obp:.310,slg:.394}, 2023:{avg:.248,obp:.320,slg:.414},
+  2024:{avg:.243,obp:.317,slg:.399}, 2025:{avg:.244,obp:.316,slg:.400}
+};
 
 // ─── State ───────────────────────────────────────────────────────────────────
 var S = {
@@ -796,25 +811,49 @@ function fetchRoster(teamId, year) {
 
 // ─── Simulation ──────────────────────────────────────────────────────────────
 function simulate() {
-  var hr=0,rbi=0,runs=0,tb=0,sb=0,avgS=0,obpS=0,slgS=0,n=0;
-  for (var i=0;i<9;i++) {
-    var s = S.lineup[i];
-    if (!s) continue;
-    var st = s.player.stats;
-    hr+=st.hr; rbi+=st.rbi; runs+=st.runs; tb+=st.tb; sb+=st.sb;
-    avgS+=st.avg; obpS+=st.obp; slgS+=st.slg; n++;
+  var hr=0, rbi=0, runs=0, sb=0;
+  var avgS=0, obpS=0, slgS=0, n=0;
+
+  for (var i = 0; i < 9; i++) {
+    var slot = S.lineup[i];
+    if (!slot) continue;
+    var st  = slot.player.stats;
+    var sea = SEASON_AVG[slot.year] || SEASON_AVG[2019];
+
+    // Durability: sqrt curve — each game near 162 adds less than each game near 0
+    var dur = Math.sqrt(Math.min(st.games, 162) / 162);
+
+    // Rate stats: pull above-average portion toward league average based on durability
+    avgS += sea.avg + (st.avg - sea.avg) * dur;
+    obpS += sea.obp + (st.obp - sea.obp) * dur;
+    slgS += sea.slg + (st.slg - sea.slg) * dur;
+
+    // Counting stats: raw totals already scale naturally with games played
+    hr   += st.hr;
+    rbi  += st.rbi;
+    runs += st.runs;
+    sb   += st.sb;
+    n++;
   }
-  var agg = { avg:n?avgS/n:0, obp:n?obpS/n:0, slg:n?slgS/n:0, hr:hr, rbi:rbi, runs:runs, tb:tb, sb:sb };
+
+  var agg = {
+    avg:  n ? avgS/n : 0,
+    obp:  n ? obpS/n : 0,
+    slg:  n ? slgS/n : 0,
+    hr: hr, rbi: rbi, runs: runs, sb: sb
+  };
+
   var norm = {};
   var keys = Object.keys(W);
-  for (var k=0;k<keys.length;k++) {
+  for (var k = 0; k < keys.length; k++) {
     var key = keys[k];
-    norm[key] = Math.min(Math.max((agg[key]-FLOOR[key])/(CEIL[key]-FLOOR[key]),0),1);
+    norm[key] = Math.min(Math.max((agg[key] - FLOOR[key]) / (CEIL[key] - FLOOR[key]), 0), 1);
   }
+
   var strength = 0;
-  for (var k2=0;k2<keys.length;k2++) strength += norm[keys[k2]] * W[keys[k2]];
+  for (var k2 = 0; k2 < keys.length; k2++) strength += norm[keys[k2]] * W[keys[k2]];
   var wins = Math.min(Math.round(58 + 104 * Math.pow(strength, 1.75)), 162);
-  return { wins:wins, strength:strength, norm:norm, agg:agg };
+  return { wins: wins, strength: strength, norm: norm, agg: agg };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -1339,7 +1378,7 @@ function showResults() {
     {k:'avg', l:'AVG', f:fmtSlash}, {k:'obp', l:'OBP', f:fmtSlash},
     {k:'slg', l:'SLG', f:fmtSlash}, {k:'hr',  l:'HR',  f:Math.round},
     {k:'rbi', l:'RBI', f:Math.round},{k:'runs',l:'R',   f:Math.round},
-    {k:'tb',  l:'TB',  f:Math.round},{k:'sb',  l:'SB',  f:Math.round},
+    {k:'sb',  l:'SB',  f:Math.round},
   ];
 
   var barsHtml = '';
@@ -1489,7 +1528,7 @@ function buildScoreInsight(norm) {
     {k:'hr', l:'home run power'}, {k:'rbi', l:'RBI production'},
     {k:'runs', l:'run scoring'},  {k:'sb',  l:'speed on the bases'},
     {k:'avg', l:'batting average'},{k:'obp', l:'on-base ability'},
-    {k:'slg', l:'slugging'},      {k:'tb',  l:'total bases'}
+    {k:'slg', l:'slugging'}
   ];
   cats.sort(function(a, b) { return (norm[b.k] || 0) - (norm[a.k] || 0); });
   return 'Your ' + cats[0].l + ' was elite — but ' + cats[cats.length - 1].l + ' held you back.';
