@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>162-0 — Build Baseball's Perfect Lineup</title>
-<meta property="og:title" content="162-0 — Build Baseball's Perfect Lineup">
-<meta property="og:description" content="Spin the slot machine, draft stars from random MLB teams and years, and build the greatest lineup in baseball history.">
-<meta property="og:url" content="https://izak467.github.io/162-0/">
+<title>Murderers' Row — Can you go 162-0?</title>
+<meta property="og:title" content="Murderers' Row — Can you go 162-0?">
+<meta property="og:description" content="Build the most feared lineup in baseball history. Spin random MLB teams and years, draft legends, and see if you can go undefeated.">
+<meta property="og:url" content="https://izak467.github.io/murderers-row/">
 <meta property="og:image" content="https://d8j0ntlcm91z4.cloudfront.net/user_3EuBEdMKRmkoyzkyMTUsq6xoneU/hf_20260615_151702_4085e95f-6080-4740-80b8-2676a5a188eb.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="162-0 — Build Baseball's Perfect Lineup">
-<meta name="twitter:description" content="Spin the slot machine, draft stars from random MLB teams and years, and build the greatest lineup in baseball history.">
+<meta name="twitter:title" content="Murderers' Row — Can you go 162-0?">
+<meta name="twitter:description" content="Build the most feared lineup in baseball history. Spin random MLB teams and years, draft legends, and see if you can go undefeated.">`
 <meta name="twitter:image" content="https://d8j0ntlcm91z4.cloudfront.net/user_3EuBEdMKRmkoyzkyMTUsq6xoneU/hf_20260615_151702_4085e95f-6080-4740-80b8-2676a5a188eb.png">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
@@ -64,14 +64,16 @@ body::before {
 .hero { border-bottom: 2px solid var(--gold-dk); padding-bottom: 20px; }
 .hero-title {
   font-family: Georgia, serif;
-  font-size: clamp(72px, 15vw, 120px);
+  font-size: clamp(38px, 9vw, 72px);
   font-weight: 700;
   color: var(--cream);
-  letter-spacing: -3px;
+  letter-spacing: -1px;
   line-height: 1;
+  text-transform: uppercase;
 }
 .hero-title span { color: var(--gold); }
-.hero-sub { font-size: 15px; color: var(--muted); margin-top: 6px; letter-spacing: .5px; }
+.hero-tagline { font-size: clamp(15px, 3.5vw, 20px); color: var(--gold); margin-top: 8px; letter-spacing: 1px; font-style: italic; }
+.hero-sub { font-size: 13px; color: var(--muted); margin-top: 4px; letter-spacing: .5px; }
 
 .card {
   background: var(--surface);
@@ -524,8 +526,9 @@ body::before {
 <!-- ═══════════ LANDING ═══════════ -->
 <div id="screen-landing" class="screen active">
   <div class="hero">
-    <div class="hero-title"><span>162</span>-0</div>
-    <div class="hero-sub">Build Baseball's Perfect Lineup · 2005 – 2025</div>
+    <div class="hero-title"><span>Murderers'</span> Row</div>
+    <div class="hero-tagline">Can you go 162-0?</div>
+    <div class="hero-sub">Build the most feared lineup in baseball history · 2005–2025</div>
   </div>
 
   <div class="card">
@@ -1361,7 +1364,7 @@ function showResults() {
   }
 
   var tags = [
-    [162,'PERFECT SEASON. 162-0. The greatest lineup ever assembled.'],
+    [162,'PERFECT SEASON. 162-0. You built a true Murderers\' Row.'],
     [150,'Historic. This lineup would obliterate the record books.'],
     [140,'Transcendent. A generational run.'],
     [130,'Dominant. A top-5 offense in MLB history.'],
@@ -1498,15 +1501,15 @@ function startDailyChallenge() {
 // ─── Score history (localStorage) ────────────────────────────────────────────
 function saveToHistory(wins) {
   try {
-    var h = JSON.parse(localStorage.getItem('162-0-history') || '[]');
+    var h = JSON.parse(localStorage.getItem('murderers-row-history') || '[]');
     h.unshift({ wins: wins, losses: 162 - wins, date: new Date().toLocaleDateString('en-US', {month:'short', day:'numeric'}) });
     if (h.length > 5) h = h.slice(0, 5);
-    localStorage.setItem('162-0-history', JSON.stringify(h));
+    localStorage.setItem('murderers-row-history', JSON.stringify(h));
   } catch(e) {}
 }
 function renderHistory() {
   try {
-    var h = JSON.parse(localStorage.getItem('162-0-history') || '[]');
+    var h = JSON.parse(localStorage.getItem('murderers-row-history') || '[]');
     var card = document.getElementById('history-card');
     var section = document.getElementById('history-section');
     if (!h.length) { card.style.display = 'none'; return; }
@@ -1556,7 +1559,7 @@ function shareScore() {
   var w = S.lastResult.wins;
   var l = 162 - w;
   var emoji = w === 162 ? '🏆' : w >= 140 ? '🔥' : w >= 110 ? '⚾' : '😤';
-  var text = emoji + ' I just built a ' + w + '–' + l + ' lineup in 162-0, the baseball lineup builder. Can you beat it?\n\nhttps://izak467.github.io/162-0/';
+  var text = emoji + ' I just built a ' + w + '–' + l + ' season in Murderers\' Row. Can you beat it?\n\nhttps://izak467.github.io/murderers-row/';
   window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
 }
 </script>
