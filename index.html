@@ -344,13 +344,22 @@ body::before {
 .fl-slash { font-family: monospace; font-size: 12px; color: #8ab8e0; font-weight: 700; }
 .fl-cnt  { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
+.results-btns { display: flex; gap: 12px; align-self: center; flex-wrap: wrap; justify-content: center; }
 .play-again-btn {
-  align-self: center; padding: 13px 36px;
+  padding: 13px 36px;
   background: var(--gold); color: #0d1b2a;
   font-size: 15px; font-weight: 700; border: none;
   border-radius: 8px; cursor: pointer; transition: background .2s;
 }
 .play-again-btn:hover { background: var(--gold-lt); }
+.share-btn {
+  padding: 13px 24px;
+  background: #000; color: #fff;
+  font-size: 15px; font-weight: 700; border: none;
+  border-radius: 8px; cursor: pointer; transition: background .2s;
+  display: flex; align-items: center; gap: 8px;
+}
+.share-btn:hover { background: #222; }
 
 /* ─── Mobile player cards ──────────────────────────────────────── */
 .player-cards { display: flex; flex-direction: column; }
@@ -534,7 +543,13 @@ body::before {
     <div class="card-header">Final Lineup</div>
     <div id="fl-rows"></div>
   </div>
-  <button class="play-again-btn" onclick="resetGame()">Play Again</button>
+  <div class="results-btns">
+    <button class="play-again-btn" onclick="resetGame()">Play Again</button>
+    <button class="share-btn" onclick="shareScore()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.258 5.63 5.906-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      Share Score
+    </button>
+  </div>
 </div>
 
 </div><!-- #app -->
@@ -1157,6 +1172,7 @@ function showResults() {
   showScreen('results');
   var res = simulate();
   var losses = 162 - res.wins;
+  S.lastResult = res;
 
   var rec = document.getElementById('result-record');
   rec.className = res.wins===162 ? 'result-record perfect' : res.wins>=110 ? 'result-record great' : 'result-record good';
@@ -1266,6 +1282,15 @@ function startGame() {
 }
 
 function resetGame() { showScreen('landing'); }
+
+function shareScore() {
+  if (!S.lastResult) return;
+  var w = S.lastResult.wins;
+  var l = 162 - w;
+  var emoji = w === 162 ? '🏆' : w >= 140 ? '🔥' : w >= 110 ? '⚾' : '😤';
+  var text = emoji + ' I just built a ' + w + '–' + l + ' lineup in 162-0, the baseball lineup builder. Can you beat it?\n\nhttps://izak467.github.io/162-0/';
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+}
 </script>
 </body>
 </html>
