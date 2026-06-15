@@ -244,7 +244,7 @@ body::before {
   padding: 1px 4px; line-height: 1.4;
 }
 .ls.filled .ls-pos { color: var(--gold); background: rgba(201,164,74,.1); }
-.ls-name { font-size: 10px; color: var(--cream); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 3px; font-weight: 600; }
+.ls-name { font-size: 9px; color: var(--cream); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 3px; font-weight: 600; }
 .ls-year { font-size: 8px; color: var(--muted); }
 .ls-empty { font-size: 18px; color: var(--border); margin-top: 2px; line-height: 1; }
 @keyframes slot-assigned {
@@ -1164,6 +1164,7 @@ function assignPlayer(player, posIdx) {
   if (S.lineup[posIdx] !== null) return;
   S.lineup[posIdx] = { player:player, year:S.spin.year, teamName:S.spin.teamName };
   S.round++;
+  S.pendingAssign = null;
   playAssign();
   showSpotlight(player.name, POS[posIdx]);
   if (S.round >= 9) { showResults(); return; }
@@ -1176,6 +1177,9 @@ function assignPlayer(player, posIdx) {
     void slots[posIdx].offsetWidth;
     slots[posIdx].classList.add('just-filled');
   }
+  // Clear roster immediately so user sees the spin without frozen content
+  S.loading = true; S.allPlayers = [];
+  renderRoster();
   doSpin(null, null);
 }
 
@@ -1363,8 +1367,7 @@ function renderLineup() {
     html += '<div class="'+cls+'">';
     html += '<div class="ls-pos">'+POS[i]+'</div>';
     if (slot) {
-      var lastName = slot.player.name.split(' ').slice(-1)[0];
-      html += '<div class="ls-name" title="'+slot.player.name+'">'+lastName+'</div>';
+      html += '<div class="ls-name" title="'+slot.player.name+'">'+slot.player.name+'</div>';
       html += '<div class="ls-year">'+slot.year+'</div>';
       if (S.moveToken > 0 && S.movingSlotIdx === -1) {
         html += '<div class="ls-move-icon" onclick="activateMove('+i+')" title="Move this player to a different position">↔</div>';
