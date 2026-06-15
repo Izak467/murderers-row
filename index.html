@@ -441,33 +441,19 @@ body::before {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* ─── Mobile player cards ──────────────────────────────────────── */
-.player-cards { display: flex; flex-direction: column; }
-.player-card {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+/* ─── Mobile player rows ───────────────────────────────────────── */
+.player-rows { display: flex; flex-direction: column; }
+.player-row {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 9px 12px; border-bottom: 1px solid var(--border);
 }
-.player-card:last-child { border-bottom: none; }
-.player-card.no-slots { opacity: .38; }
-.pc-top {
-  display: flex; justify-content: space-between; align-items: baseline;
-  margin-bottom: 7px;
-}
-.pc-name { font-weight: 700; font-size: 15px; color: var(--cream); }
-.pc-games { font-size: 11px; color: var(--muted); font-weight: 600; }
-.pc-stats {
-  display: flex; margin-bottom: 10px;
-  background: var(--bg); border-radius: 6px;
-  border: 1px solid var(--border); overflow: hidden;
-}
-.pc-stat {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  padding: 5px 3px; border-right: 1px solid var(--border);
-}
-.pc-stat:last-child { border-right: none; }
-.pc-stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
-.pc-stat-val { font-size: 13px; color: var(--cream-dim); font-weight: 700; margin-top: 2px; }
-.pc-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.player-row:last-child { border-bottom: none; }
+.player-row.no-slots { opacity: .38; }
+.pr-top { display: flex; align-items: center; gap: 8px; }
+.pr-name { flex: 1; font-weight: 700; font-size: 14px; color: var(--cream); }
+.pr-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.pr-stats { display: flex; gap: 12px; font-size: 11px; color: var(--cream-dim); }
+.pr-stat span { color: var(--muted); font-size: 10px; margin-right: 1px; }
 
 /* Mobile sort bar */
 .sort-bar {
@@ -522,9 +508,9 @@ body::before {
 
   /* Position buttons — thumb-friendly */
   .pos-assign-btn {
-    min-height: 44px; min-width: 52px;
-    font-size: 13px; font-weight: 800;
-    padding: 8px 12px;
+    min-height: 38px; min-width: 42px;
+    font-size: 12px; font-weight: 800;
+    padding: 6px 10px;
   }
 
   .fl-row { gap: 8px; }
@@ -1172,25 +1158,28 @@ function renderRoster() {
     }
     sortBar += '</div>';
 
-    var cards = '';
+    var rows = '';
     for (var i = 0; i < players.length; i++) {
       var p = players[i]; var st = p.stats;
       if (movingPlayer && p.id !== movingPlayer.id) continue;
       var btnHtml = buildBtnHtml(p, i, movingPlayer);
       var hasAvail = movingPlayer ? true : eligibleSlotsFor(p).available.length > 0;
-      cards += '<div class="player-card'+(hasAvail?'':' no-slots')+'">'
-        + '<div class="pc-top"><div class="pc-name">'+p.name+'</div><div class="pc-games">'+st.games+'G</div></div>'
-        + '<div class="pc-stats">'
-        + '<div class="pc-stat"><div class="pc-stat-lbl">OPS</div><div class="pc-stat-val">'+fmtSlash(st.obp+st.slg)+'</div></div>'
-        + '<div class="pc-stat"><div class="pc-stat-lbl">R</div><div class="pc-stat-val">'+st.runs+'</div></div>'
-        + '<div class="pc-stat"><div class="pc-stat-lbl">HR</div><div class="pc-stat-val">'+st.hr+'</div></div>'
-        + '<div class="pc-stat"><div class="pc-stat-lbl">RBI</div><div class="pc-stat-val">'+st.rbi+'</div></div>'
-        + '<div class="pc-stat"><div class="pc-stat-lbl">SB</div><div class="pc-stat-val">'+st.sb+'</div></div>'
+      rows += '<div class="player-row'+(hasAvail?'':' no-slots')+'">'
+        + '<div class="pr-top">'
+        + '<div class="pr-name">'+p.name+'</div>'
+        + '<div class="pr-btns">'+btnHtml+'</div>'
         + '</div>'
-        + '<div class="pc-buttons">'+btnHtml+'</div>'
+        + '<div class="pr-stats">'
+        + '<span><span>G</span>'+st.games+'</span>'
+        + '<span><span>OPS</span>'+fmtSlash(st.obp+st.slg)+'</span>'
+        + '<span><span>HR</span>'+st.hr+'</span>'
+        + '<span><span>RBI</span>'+st.rbi+'</span>'
+        + '<span><span>R</span>'+st.runs+'</span>'
+        + '<span><span>SB</span>'+st.sb+'</span>'
+        + '</div>'
         + '</div>';
     }
-    body.innerHTML = sortBar + '<div class="player-cards">'+cards+'</div>';
+    body.innerHTML = sortBar + '<div class="player-rows">'+rows+'</div>';
 
   } else {
     // ── Desktop: table layout ────────────────────────────────────
