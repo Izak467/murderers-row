@@ -1001,69 +1001,28 @@ var SEASON_AVG = {
 };
 
 // ─── Awards ──────────────────────────────────────────────────────────────────
-// MVP top-3 by league, keyed "name|year" → rank. Pitchers excluded (won't
-// appear in this game). Accent-normalized via getMvpRank().
-// MVP top-3 finishers by league, keyed "name|year" → rank.
-// Pitchers excluded (Verlander 2011, Kershaw 2014 won but won't appear in game).
-// 2024 NL: only #1 listed — not confident enough in 2nd/3rd.
+// MVP winners only (rank 1), keyed "name|year". Pitchers excluded
+// (Verlander 2011 AL, Kershaw 2014 NL won but don't appear in this game).
 var MVP_RANKS = {
-  // 2005
-  'Alex Rodriguez|2005':1,'David Ortiz|2005':2,'Manny Ramirez|2005':3,
-  'Albert Pujols|2005':1,'Andruw Jones|2005':2,'Derrek Lee|2005':3,
-  // 2006
-  'Justin Morneau|2006':1,'Derek Jeter|2006':2,'David Ortiz|2006':3,
-  'Ryan Howard|2006':1,'Albert Pujols|2006':2,'Carlos Beltran|2006':3,
-  // 2007
-  'Alex Rodriguez|2007':1,'Magglio Ordonez|2007':2,
-  'Jimmy Rollins|2007':1,'Matt Holliday|2007':2,'David Wright|2007':3,
-  // 2008
-  'Dustin Pedroia|2008':1,
-  'Albert Pujols|2008':1,'Ryan Howard|2008':2,'Lance Berkman|2008':3,
-  // 2009
-  'Joe Mauer|2009':1,'Mark Teixeira|2009':2,'Derek Jeter|2009':3,
-  'Albert Pujols|2009':1,'Hanley Ramirez|2009':2,'Ryan Howard|2009':3,
-  // 2010
-  'Josh Hamilton|2010':1,'Miguel Cabrera|2010':2,'Evan Longoria|2010':3,
-  'Joey Votto|2010':1,'Carlos Gonzalez|2010':2,'Albert Pujols|2010':3,
-  // 2011 — Verlander (P) won AL
-  'Jacoby Ellsbury|2011':2,'Jose Bautista|2011':3,
-  'Ryan Braun|2011':1,'Matt Kemp|2011':2,'Prince Fielder|2011':3,
-  // 2012
-  'Miguel Cabrera|2012':1,'Mike Trout|2012':2,'Adrian Beltre|2012':3,
-  'Buster Posey|2012':1,'Ryan Braun|2012':2,'Andrew McCutchen|2012':3,
-  // 2013
-  'Miguel Cabrera|2013':1,'Mike Trout|2013':2,'Chris Davis|2013':3,
-  'Andrew McCutchen|2013':1,'Paul Goldschmidt|2013':2,'Yadier Molina|2013':3,
-  // 2014 — Kershaw (P) won NL
-  'Mike Trout|2014':1,'Victor Martinez|2014':2,'Jose Abreu|2014':3,
-  'Giancarlo Stanton|2014':2,'Andrew McCutchen|2014':3,
-  // 2015
-  'Josh Donaldson|2015':1,'Mike Trout|2015':2,'Nelson Cruz|2015':3,
-  'Bryce Harper|2015':1,'Paul Goldschmidt|2015':2,'Joey Votto|2015':3,
-  // 2016
-  'Mike Trout|2016':1,'Mookie Betts|2016':2,'Jose Altuve|2016':3,
-  'Kris Bryant|2016':1,'Daniel Murphy|2016':2,'Corey Seager|2016':3,
-  // 2017
-  'Jose Altuve|2017':1,'Aaron Judge|2017':2,'Carlos Correa|2017':3,
-  'Giancarlo Stanton|2017':1,
-  // 2018
-  'Mookie Betts|2018':1,'Mike Trout|2018':2,'Jose Ramirez|2018':3,
-  'Christian Yelich|2018':1,'Javier Baez|2018':2,
-  // 2019
-  'Mike Trout|2019':1,'Alex Bregman|2019':2,'Marcus Semien|2019':3,
-  'Cody Bellinger|2019':1,'Anthony Rendon|2019':2,'Christian Yelich|2019':3,
-  // 2021
-  'Shohei Ohtani|2021':1,'Vladimir Guerrero Jr.|2021':2,'Marcus Semien|2021':3,
-  'Bryce Harper|2021':1,'Juan Soto|2021':2,'Fernando Tatis Jr.|2021':3,
-  // 2022
-  'Aaron Judge|2022':1,'Yordan Alvarez|2022':2,'Jose Ramirez|2022':3,
-  'Paul Goldschmidt|2022':1,'Manny Machado|2022':2,'Nolan Arenado|2022':3,
-  // 2023
-  'Shohei Ohtani|2023':1,
-  'Ronald Acuna Jr.|2023':1,'Matt Olson|2023':2,'Freddie Freeman|2023':3,
-  // 2024 — only listing what's confirmed
-  'Aaron Judge|2024':1,'Gunnar Henderson|2024':2,'Bobby Witt Jr.|2024':3,
-  'Shohei Ohtani|2024':1,
+  'Alex Rodriguez|2005':1, 'Albert Pujols|2005':1,
+  'Justin Morneau|2006':1, 'Ryan Howard|2006':1,
+  'Alex Rodriguez|2007':1, 'Jimmy Rollins|2007':1,
+  'Dustin Pedroia|2008':1, 'Albert Pujols|2008':1,
+  'Joe Mauer|2009':1,      'Albert Pujols|2009':1,
+  'Josh Hamilton|2010':1,  'Joey Votto|2010':1,
+  /* 2011 AL: Verlander (P) */ 'Ryan Braun|2011':1,
+  'Miguel Cabrera|2012':1, 'Buster Posey|2012':1,
+  'Miguel Cabrera|2013':1, 'Andrew McCutchen|2013':1,
+  'Mike Trout|2014':1,     /* 2014 NL: Kershaw (P) */
+  'Josh Donaldson|2015':1, 'Bryce Harper|2015':1,
+  'Mike Trout|2016':1,     'Kris Bryant|2016':1,
+  'Jose Altuve|2017':1,    'Giancarlo Stanton|2017':1,
+  'Mookie Betts|2018':1,   'Christian Yelich|2018':1,
+  'Mike Trout|2019':1,     'Cody Bellinger|2019':1,
+  'Shohei Ohtani|2021':1,  'Bryce Harper|2021':1,
+  'Aaron Judge|2022':1,    'Paul Goldschmidt|2022':1,
+  'Shohei Ohtani|2023':1,  'Ronald Acuna Jr.|2023':1,
+  'Aaron Judge|2024':1,    'Shohei Ohtani|2024':1,
 };
 
 function _normName(n) {
@@ -1121,9 +1080,7 @@ function getAwardBadgesHtml(player, year) {
   var html = '';
   var rank = getMvpRank(player.name, year);
   if (rank === 1) {
-    html += '<span class="award-badge award-mvp" title="MVP Winner">🏆1</span>';
-  } else if (rank >= 2 && rank <= 3) {
-    html += '<span class="award-badge award-mvp" title="MVP Top-3 Finisher">🏆</span>';
+    html += '<span class="award-badge award-mvp" title="MVP">🏆</span>';
   }
   var ad = S.awardData;
   if (ad && ad.allStars && ad.allStars[player.id]) {
