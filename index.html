@@ -368,11 +368,13 @@ body::before {
   overflow: hidden;
 }
 .roster-card-header {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  display: flex; flex-direction: row; align-items: center; gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   background: #0f1f38;
 }
+.roster-header-text { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.roster-logo { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; opacity: 0.88; }
 .roster-title { font-size: 12px; color: var(--muted); }
 .roster-title strong { color: var(--cream); }
 
@@ -1023,6 +1025,8 @@ body.era-nostalgia .roster-table tr:hover td { background: var(--surface2); }
   <!-- Roster -->
   <div class="roster-card">
     <div class="roster-card-header">
+      <img id="roster-team-logo" class="roster-logo" src="" alt="" onerror="this.style.display='none'" style="display:none">
+      <div class="roster-header-text">
       <div class="roster-title" id="roster-title">Spinning…</div>
       <div id="roster-filters">
         <button class="filter-chip" id="avail-filter-btn" onclick="toggleAvailableFilter()">Available only</button>
@@ -1032,6 +1036,7 @@ body.era-nostalgia .roster-table tr:hover td { background: var(--surface2); }
           <div class="pos-dropdown" id="pos-dropdown" onclick="event.stopPropagation()"></div>
         </div>
       </div>
+      </div><!-- /.roster-header-text -->
     </div>
     <div id="roster-body"></div>
   </div>
@@ -1159,14 +1164,19 @@ var TEAM_HISTORY = {
   136: { from: 1977 },  // Seattle Mariners (expansion)
   141: { from: 1977 },  // Toronto Blue Jays (expansion)
   140: { from: 1972 },  // Texas Rangers (Washington Senators moved after 1971)
-  158: { from: 1970 },  // Milwaukee Brewers (Seattle Pilots existed 1969 only)
+  158: { from: 1969 },  // Milwaukee Brewers (same franchise as Seattle Pilots 1969)
   139: { from: 1998 },  // Tampa Bay Devil Rays (expansion)
 };
 
 // Name/abbreviation overrides for franchises that moved or renamed
 var TEAM_HIST_NAMES = {
-  120: [{ from: 1969, to: 2004, name: 'Montreal Expos',   abbr: 'MON' }],
-  114: [{ from: 1969, to: 2021, name: 'Cleveland Indians', abbr: 'CLE' }],
+  120: [{ from: 1969, to: 2004, name: 'Montreal Expos',       abbr: 'MON' }],
+  114: [{ from: 1969, to: 2021, name: 'Cleveland Indians',    abbr: 'CLE' }],
+  158: [{ from: 1969, to: 1969, name: 'Seattle Pilots',       abbr: 'SEA' }],
+  108: [{ from: 1966, to: 1996, name: 'California Angels',    abbr: 'CAL' },
+        { from: 1997, to: 2004, name: 'Anaheim Angels',       abbr: 'ANA' }],
+  146: [{ from: 1993, to: 2011, name: 'Florida Marlins',      abbr: 'FLA' }],
+  139: [{ from: 1998, to: 2007, name: 'Tampa Bay Devil Rays', abbr: 'TB'  }],
 };
 
 function getValidTeams(year) {
@@ -1983,6 +1993,16 @@ function refreshSkipBtns() {
 function renderRoster() {
   var title = document.getElementById('roster-title');
   var body  = document.getElementById('roster-body');
+  var rosterLogo = document.getElementById('roster-team-logo');
+  if (rosterLogo) {
+    if (S.spin) {
+      var _tInfo = historicalTeamInfo(S.spin.teamId, S.spin.year);
+      rosterLogo.src = teamLogoUrl(_tInfo.abbr);
+      rosterLogo.style.display = '';
+    } else {
+      rosterLogo.style.display = 'none';
+    }
+  }
 
   if (S.loading) {
     title.innerHTML = 'Loading roster…';
