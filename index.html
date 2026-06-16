@@ -1150,6 +1150,45 @@ var TEAMS = [
   { id:120, name:'Washington Nationals',  abbr:'WSH', color:'#AB0003' },
 ];
 
+// Franchise existence windows (teamId → first year in this city/identity)
+// Teams with no entry are valid for all years.
+var TEAM_HISTORY = {
+  109: { from: 1998 },  // Arizona Diamondbacks (expansion)
+  115: { from: 1993 },  // Colorado Rockies (expansion)
+  146: { from: 1993 },  // Florida / Miami Marlins (expansion)
+  136: { from: 1977 },  // Seattle Mariners (expansion)
+  141: { from: 1977 },  // Toronto Blue Jays (expansion)
+  140: { from: 1972 },  // Texas Rangers (Washington Senators moved after 1971)
+  158: { from: 1970 },  // Milwaukee Brewers (Seattle Pilots existed 1969 only)
+  139: { from: 1998 },  // Tampa Bay Devil Rays (expansion)
+};
+
+// Name/abbreviation overrides for franchises that moved or renamed
+var TEAM_HIST_NAMES = {
+  120: [{ from: 1969, to: 2004, name: 'Montreal Expos',   abbr: 'MON' }],
+  114: [{ from: 1969, to: 2021, name: 'Cleveland Indians', abbr: 'CLE' }],
+};
+
+function getValidTeams(year) {
+  return TEAMS.filter(function(t) {
+    var h = TEAM_HISTORY[t.id];
+    if (!h) return true;
+    return year >= h.from && (!h.to || year <= h.to);
+  });
+}
+
+function historicalTeamInfo(teamId, year) {
+  var overrides = TEAM_HIST_NAMES[teamId];
+  if (overrides) {
+    for (var i = 0; i < overrides.length; i++) {
+      var o = overrides[i];
+      if (year >= o.from && year <= o.to) return { name: o.name, abbr: o.abbr };
+    }
+  }
+  var t = TEAMS.filter(function(x){ return x.id === teamId; })[0];
+  return t ? { name: t.name, abbr: t.abbr } : { name: '', abbr: '' };
+}
+
 var API   = 'https://statsapi.mlb.com/api/v1';
 var POS   = ['C','1B','2B','3B','SS','LF','CF','RF','DH'];
 var YEARS = [2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2021,2022,2023,2024,2025];
@@ -1187,7 +1226,7 @@ var ERA_CONFIG = {
     yearPool: [1969,1970,1971,1973,1974,1975,1976,1977,1978,1979,1980,
                1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993],
     seasonScale: {},
-    showSS: false, showASG: false, showROY: true, showMVP: true,
+    showSS: true, showASG: true, showROY: true, showMVP: true, ssSince: 1980,
     fbColl: 'scores_nostalgia', fbCollHard: 'hardScores_nostalgia',
     statRanges: {
       g:[40,110,162], avg:[0.220,0.275,0.375], ops:[0.600,0.750,0.960],
@@ -1321,7 +1360,7 @@ function fetchAwardsForYear(year, era) {
     ['ALMVP', 'mvpWinners'], ['NLMVP', 'mvpWinners'],
   ];
   if (eraCfg.showASG) { endpoints.push(['ALAS','allStars']); endpoints.push(['NLAS','allStars']); }
-  if (eraCfg.showSS)  { endpoints.push(['ALSS','silverSluggers']); endpoints.push(['NLSS','silverSluggers']); }
+  if (eraCfg.showSS && year >= (eraCfg.ssSince || 0)) { endpoints.push(['ALSS','silverSluggers']); endpoints.push(['NLSS','silverSluggers']); }
   var fetches = endpoints.map(function(ep) {
     var awardId = ep[0], key = ep[1];
     return fetch(base + awardId + '/recipients?season=' + year)
@@ -1716,14 +1755,25 @@ function doSpin(lockYear, lockTeamId) {
 
   // Exclude recently used years/teams from random picks
   var eraYears = ERA_CONFIG[S.era || 'modern'].yearPool;
-  var yearPool = eraYears.filter(function(y){ return S.recentYears.indexOf(y) === -1; });
-  var teamPool = TEAMS.filter(function(t){ return S.recentTeams.indexOf(t.id) === -1; });
 
-  var finalYear = lockYear   != null ? lockYear   : pick(yearPool.length ? yearPool : eraYears);
+  // When keeping a team (skipYear), only allow years that team existed
+  var validYears = (lockTeamId != null) ? eraYears.filter(function(y) {
+    var h = TEAM_HISTORY[lockTeamId];
+    return !h || (y >= h.from && (!h.to || y <= h.to));
+  }) : eraYears;
+  var yearPool = validYears.filter(function(y){ return S.recentYears.indexOf(y) === -1; });
+
+  var finalYear = lockYear != null ? lockYear : pick(yearPool.length ? yearPool : validYears);
+
+  // Only pick teams that existed in the selected year
+  var validTeams = getValidTeams(finalYear);
+  var teamPool = validTeams.filter(function(t){ return S.recentTeams.indexOf(t.id) === -1; });
   var finalTeam = lockTeamId != null
     ? TEAMS.filter(function(t){return t.id===lockTeamId;})[0]
-    : pick(teamPool.length ? teamPool : TEAMS);
-  S.spin = { year:finalYear, teamId:finalTeam.id, teamName:finalTeam.name };
+    : pick(teamPool.length ? teamPool : validTeams);
+
+  var finalTeamInfo = historicalTeamInfo(finalTeam.id, finalYear);
+  S.spin = { year:finalYear, teamId:finalTeam.id, teamName:finalTeamInfo.name };
 
   // Track recents (only for randomly chosen values, not locked ones)
   if (lockYear == null) {
@@ -1774,7 +1824,7 @@ function doSpin(lockYear, lockTeamId) {
 
     // Team keeps spinning until final tick
     if (step < TICKS - 1) {
-      svTeam.textContent = (lockTeamId != null) ? finalTeam.name : pick(TEAMS).name;
+      svTeam.textContent = (lockTeamId != null) ? finalTeamInfo.name : pick(validTeams).name;
     }
 
     playTick();
@@ -1784,8 +1834,8 @@ function doSpin(lockYear, lockTeamId) {
       setTimeout(tick, delays[step]);
     } else {
       // Team lands
-      svTeam.textContent = finalTeam.name;
-      svLogo.src = teamLogoUrl(finalTeam.abbr);
+      svTeam.textContent = finalTeamInfo.name;
+      svLogo.src = teamLogoUrl(finalTeamInfo.abbr);
       svLogo.style.display = '';
 
       wt.classList.remove('cycling');
