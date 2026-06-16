@@ -1728,7 +1728,6 @@ function renderRoster() {
         + (S.hardMode ? '' :
           '<div class="pr-stats">'
           + '<span class="pr-stat-pill pr-stat-g" style="background:'+statTint(st.games,40,110,162)+'"><span class="pr-stat-lbl">G</span>'+st.games+'</span>'
-          + '<span class="pr-stat-pill" style="background:'+statTint(st.avg,0.220,0.270,0.330)+'"><span class="pr-stat-lbl">AVG</span>'+fmtSlash(st.avg)+'</span>'
           + '<span class="pr-stat-pill pr-stat-ops" style="background:'+statTint(st.obp+st.slg,0.640,0.790,0.975)+'"><span class="pr-stat-lbl">OPS</span>'+fmtSlash(st.obp+st.slg)+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.runs,25,60,108)+'"><span class="pr-stat-lbl">R</span>'+st.runs+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.hr,0,15,44)+'"><span class="pr-stat-lbl">HR</span>'+st.hr+'</span>'
