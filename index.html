@@ -1702,7 +1702,7 @@ function renderRoster() {
   if (mobile) {
     // ── Mobile: card layout + sort bar ──────────────────────────
     var sortDefs = [
-      {col:'games',lbl:'G'},{col:'ops',lbl:'OPS'},{col:'runs',lbl:'R'},
+      {col:'games',lbl:'G'},{col:'avg',lbl:'AVG'},{col:'ops',lbl:'OPS'},{col:'runs',lbl:'R'},
       {col:'hr',lbl:'HR'},{col:'rbi',lbl:'RBI'},{col:'sb',lbl:'SB'}
     ];
     var sortBar = '<div class="sort-bar">';
@@ -1728,6 +1728,7 @@ function renderRoster() {
         + (S.hardMode ? '' :
           '<div class="pr-stats">'
           + '<span class="pr-stat-pill pr-stat-g" style="background:'+statTint(st.games,40,110,162)+'"><span class="pr-stat-lbl">G</span>'+st.games+'</span>'
+          + '<span class="pr-stat-pill" style="background:'+statTint(st.avg,0.220,0.270,0.330)+'"><span class="pr-stat-lbl">AVG</span>'+fmtSlash(st.avg)+'</span>'
           + '<span class="pr-stat-pill pr-stat-ops" style="background:'+statTint(st.obp+st.slg,0.640,0.790,0.975)+'"><span class="pr-stat-lbl">OPS</span>'+fmtSlash(st.obp+st.slg)+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.runs,25,60,108)+'"><span class="pr-stat-lbl">R</span>'+st.runs+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.hr,0,15,44)+'"><span class="pr-stat-lbl">HR</span>'+st.hr+'</span>'
@@ -1750,6 +1751,7 @@ function renderRoster() {
     var thead = '<thead><tr>'
       + '<th '+thClick('name')+'>Player'+sortArrow('name')+'</th>'
       + '<th '+thClick('games')+' class="'+(S.sort.col==='games'?'sorted':'')+'" style="text-align:right">G'+sortArrow('games')+'</th>'
+      + '<th '+thClick('avg')+' class="'+(S.sort.col==='avg'?'sorted':'')+'" style="text-align:right">AVG'+sortArrow('avg')+'</th>'
       + '<th '+thClick('ops')+' class="'+(S.sort.col==='ops'?'sorted':'')+'" style="text-align:right">OPS'+sortArrow('ops')+'</th>'
       + '<th '+thClick('runs')+' class="'+(S.sort.col==='runs'?'sorted':'')+'" style="text-align:right">R'+sortArrow('runs')+'</th>'
       + '<th '+thClick('hr')+' class="'+(S.sort.col==='hr'?'sorted':'')+'" style="text-align:right">HR'+sortArrow('hr')+'</th>'
@@ -1769,6 +1771,7 @@ function renderRoster() {
       rows += '<tr class="'+(hasAvail?'':'no-slots')+'">'
         + '<td class="td-name">'+p.name+(badges?'<span class="pr-award-badges">'+badges+'</span>':'')+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.games,40,110,162)+'">'+st.games+'</td>'
+        + '<td class="td-num" style="background:'+statTint(st.avg,0.220,0.270,0.330)+'">'+fmtSlash(st.avg)+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.obp+st.slg,0.640,0.790,0.975)+'">'+fmtSlash(st.obp+st.slg)+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.runs,25,60,108)+'">'+st.runs+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.hr,0,15,44)+'">'+st.hr+'</td>'
@@ -2057,27 +2060,27 @@ function showResults() {
 
   if (typeof window._fbSaveScore === 'function') {
     var _fbColl = S.hardMode ? 'hardScores' : 'scores';
+
+    // Pre-show leaderboard card with loading state so it never pops in
+    document.getElementById('fb-leaderboard-title').textContent = S.hardMode ? '☠ Hard Mode Leaderboard' : 'Leaderboard';
+    document.getElementById('fb-leaderboard-body').innerHTML = '<div style="padding:10px 0;text-align:center;color:var(--muted);font-size:12px">Loading…</div>';
+    document.getElementById('fb-leaderboard-card').style.display = 'block';
+
+    // Save score, then read leaderboard sequentially (read must follow write)
     window._fbSaveScore(res.wins, lineupSummary, _fbColl).then(function(pb) {
-      if (!pb) return;
-
-      // Streak + PB boxes
-      document.getElementById('fb-streak-val').textContent = pb.streak + (pb.streak === 1 ? ' 🔥' : ' 🔥');
-      document.getElementById('fb-pb-val').textContent = pb.pb + '-' + (162 - pb.pb);
-      document.getElementById('fb-stats-row').style.display = 'flex';
-
-      // New PB banner
-      if (pb.isNewPB && pb.pb > 0) {
-        document.getElementById('fb-pb-banner').style.display = 'block';
+      if (pb) {
+        document.getElementById('fb-streak-val').textContent = pb.streak + ' 🔥';
+        document.getElementById('fb-pb-val').textContent = pb.pb + '-' + (162 - pb.pb);
+        document.getElementById('fb-stats-row').style.display = 'flex';
+        if (pb.isNewPB && pb.pb > 0) {
+          document.getElementById('fb-pb-banner').style.display = 'block';
+        }
       }
-
-      // Percentile + leaderboard
       return window._fbGetTodayStats(res.wins, _fbColl);
     }).then(function(stats) {
-      if (!stats) return;
+      if (!stats) { document.getElementById('fb-leaderboard-card').style.display = 'none'; return; }
       document.getElementById('fb-pct-val').textContent = stats.total < 2 ? '—' : stats.percentile + '%';
       document.getElementById('fb-pct-lbl').textContent = stats.total < 2 ? 'First Today!' : 'Better Than Today';
-
-      // Leaderboard
       if (stats.top10.length > 0) {
         var myUid = window._fbUid;
         var medals = ['🥇','🥈','🥉'];
@@ -2088,15 +2091,18 @@ function showResults() {
           var rankLabel = i < 3 ? medals[i] : (i+1);
           lbHtml += '<div class="lb-row'+(isMe?' my-row':'')+'">'
             +'<div class="lb-rank'+(i<3?' top3':'')+'">'+rankLabel+'</div>'
-            +'<div class="lb-wins">'+(s.wins)+'-'+(162-s.wins)+'</div>'
+            +'<div class="lb-wins">'+s.wins+'-'+(162-s.wins)+'</div>'
             +'<div class="lb-lineup">'+(isMe ? '<strong style="color:var(--gold-lt)">You</strong> · ' : '')+s.lineup+'</div>'
             +'</div>';
         }
         document.getElementById('fb-leaderboard-body').innerHTML = lbHtml;
-        document.getElementById('fb-leaderboard-title').textContent = S.hardMode ? '☠ Hard Mode Leaderboard' : 'Leaderboard';
-        document.getElementById('fb-leaderboard-card').style.display = 'block';
+      } else {
+        document.getElementById('fb-leaderboard-card').style.display = 'none';
       }
-    }).catch(function(e) { console.warn('Firebase stats error', e); });
+    }).catch(function(e) {
+      console.warn('Firebase stats error', e);
+      document.getElementById('fb-leaderboard-card').style.display = 'none';
+    });
   }
 
   // Load streak/PB even without a new score (e.g. page reload)
