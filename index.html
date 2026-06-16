@@ -1104,7 +1104,7 @@ var TEAM_HISTORY = {
 
 // Name/abbreviation overrides for franchises that moved or renamed
 var TEAM_HIST_NAMES = {
-  120: [{ from: 1969, to: 2004, name: 'Montreal Expos',       abbr: 'MON' }],
+  120: [{ from: 1969, to: 2004, name: 'Montreal Expos',       abbr: 'MON', logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/3/36/Montreal_Expos_cap_logo.svg/100px-Montreal_Expos_cap_logo.svg.png' }],
   114: [{ from: 1969, to: 2021, name: 'Cleveland Indians',    abbr: 'CLE' }],
   158: [{ from: 1969, to: 1969, name: 'Seattle Pilots',       abbr: 'SEA' }],
   108: [{ from: 1966, to: 1996, name: 'California Angels',    abbr: 'CAL' },
@@ -1126,11 +1126,11 @@ function historicalTeamInfo(teamId, year) {
   if (overrides) {
     for (var i = 0; i < overrides.length; i++) {
       var o = overrides[i];
-      if (year >= o.from && year <= o.to) return { name: o.name, abbr: o.abbr };
+      if (year >= o.from && year <= o.to) return { name: o.name, abbr: o.abbr, logoUrl: o.logoUrl || null };
     }
   }
   var t = TEAMS.filter(function(x){ return x.id === teamId; })[0];
-  return t ? { name: t.name, abbr: t.abbr } : { name: '', abbr: '' };
+  return t ? { name: t.name, abbr: t.abbr, logoUrl: null } : { name: '', abbr: '', logoUrl: null };
 }
 
 var API   = 'https://statsapi.mlb.com/api/v1';
@@ -1790,7 +1790,7 @@ function doSpin(lockYear, lockTeamId) {
     } else {
       // Team lands
       svTeam.textContent = finalTeamInfo.name;
-      svLogo.src = teamLogoUrl(finalTeamInfo.abbr);
+      svLogo.src = finalTeamInfo.logoUrl || teamLogoUrl(finalTeamInfo.abbr);
       svLogo.style.display = '';
 
       wt.classList.remove('cycling');
@@ -1942,7 +1942,7 @@ function renderRoster() {
   if (rosterLogo) {
     if (S.spin) {
       var _tInfo = historicalTeamInfo(S.spin.teamId, S.spin.year);
-      rosterLogo.src = teamLogoUrl(_tInfo.abbr);
+      rosterLogo.src = _tInfo.logoUrl || teamLogoUrl(_tInfo.abbr);
       rosterLogo.style.display = '';
     } else {
       rosterLogo.style.display = 'none';
