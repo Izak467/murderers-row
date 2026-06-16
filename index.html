@@ -737,7 +737,9 @@ body::before {
   padding: 1px 3px; border-radius: 3px;
 }
 .award-mvp { background: rgba(201,164,74,.18); color: var(--gold); border: 1px solid rgba(201,164,74,.35); }
-.award-ss  { background: rgba(201,164,74,.12); border: 1px solid rgba(201,164,74,.25); }
+.award-ss  { background: rgba(170,190,215,.13); border: 1px solid rgba(170,190,215,.35); }
+.award-as  { background: rgba(100,150,220,.10); border: 1px solid rgba(100,150,220,.28); }
+.award-roy { background: rgba(90,190,110,.10); border: 1px solid rgba(90,190,110,.28); }
 
 /* Mobile sort bar */
 .sort-bar {
@@ -824,7 +826,7 @@ body::before {
     <div class="card-header">How to Play</div>
     <ul class="rules-list">
       <li>Each round, the slot machine spins a random <strong>MLB team + year</strong> (2005–2025, no 2020). Don't like what you got? You have <strong>one team skip</strong> and <strong>one year skip</strong> per game.</li>
-      <li>Browse the full roster of everyone who suited up that season. Stat cards are color-coded <strong>red → green</strong> so the studs stand out. <strong>🏆</strong> next to a name = MVP that year. <strong>⭐</strong> = All-Star.</li>
+      <li>Browse the full roster of everyone who suited up that season. Stat cards are color-coded <strong>red → green</strong> so the studs stand out. Badge guide: <strong>🏆</strong> MVP · <strong>🐣</strong> Rookie of the Year · <strong>🦇</strong> Silver Slugger · <strong>⭐</strong> All-Star.</li>
       <li>A player needs <strong>10+ games at a position</strong> to be eligible there.</li>
       <li>Fill all 9 slots: <strong>C · 1B · 2B · 3B · SS · LF · CF · RF · DH</strong>. Use <strong>Available Only</strong> or the <strong>Position</strong> filter to find the right fits fast.</li>
       <li>Slots lock once filled — but you get one <strong>↔ Move Token</strong> to reassign any placed player to another open position they qualify for.</li>
@@ -1079,49 +1081,52 @@ function getMvpRank(playerName, year) {
   return 0;
 }
 
-var _awardsCache = {}; // year → { allStars: {playerId: true} }
+var _awardsCache = {}; // year → { allStars:{}, silverSluggers:{}, roys:{}, mvpWinners:{} }
 
 function fetchAwardsForYear(year) {
   if (_awardsCache[year]) return Promise.resolve(_awardsCache[year]);
-  var cache = { allStars: {} };
+  var cache = { allStars: {}, silverSluggers: {}, roys: {}, mvpWinners: {} };
   _awardsCache[year] = cache;
-  // Fetch All-Star game from schedule, then get boxscore roster
-  return fetch('https://statsapi.mlb.com/api/v1/schedule?sportId=1&season='+year+'&gameType=A')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var gamePk = null;
-      var dates = data.dates || [];
-      for (var d = 0; d < dates.length && !gamePk; d++) {
-        var games = dates[d].games || [];
-        for (var g = 0; g < games.length; g++) {
-          if (games[g].gameType === 'A') { gamePk = games[g].gamePk; break; }
-        }
-      }
-      if (!gamePk) return cache;
-      return fetch('https://statsapi.mlb.com/api/v1/game/'+gamePk+'/boxscore')
-        .then(function(r) { return r.json(); })
-        .then(function(box) {
-          var teams = (box && box.teams) || {};
-          ['away','home'].forEach(function(side) {
-            var players = (teams[side] || {}).players || {};
-            Object.keys(players).forEach(function(key) {
-              var pid = players[key].person && players[key].person.id;
-              if (pid) cache.allStars[pid] = true;
-            });
-          });
-          return cache;
+  var base = 'https://statsapi.mlb.com/api/v1/awards/';
+  var endpoints = [
+    ['ALAS',  'allStars'],
+    ['NLAS',  'allStars'],
+    ['ALSS',  'silverSluggers'],
+    ['NLSS',  'silverSluggers'],
+    ['ALROY', 'roys'],
+    ['NLROY', 'roys'],
+    ['ALMVP', 'mvpWinners'],
+    ['NLMVP', 'mvpWinners'],
+  ];
+  var fetches = endpoints.map(function(ep) {
+    var awardId = ep[0], key = ep[1];
+    return fetch(base + awardId + '/recipients?season=' + year)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        (data.awards || []).forEach(function(a) {
+          if (a.player && a.player.id) cache[key][a.player.id] = true;
         });
-    })
-    .catch(function() { return cache; });
+      })
+      .catch(function() {});
+  });
+  return Promise.all(fetches).then(function() { return cache; });
 }
 
 function getAwardBadgesHtml(player, year) {
   var html = '';
-  var rank = getMvpRank(player.name, year);
-  if (rank === 1) {
-    html += '<span class="award-badge award-mvp" title="MVP">🏆</span>';
-  }
   var ad = S.awardData;
+  // MVP: API winner (by ID) or hardcoded fallback (by name)
+  var isMvp = (ad && ad.mvpWinners && ad.mvpWinners[player.id]) || getMvpRank(player.name, year) === 1;
+  if (isMvp) html += '<span class="award-badge award-mvp" title="MVP">🏆</span>';
+  // ROY
+  if (ad && ad.roys && ad.roys[player.id]) {
+    html += '<span class="award-badge award-roy" title="Rookie of the Year">🐣</span>';
+  }
+  // Silver Slugger
+  if (ad && ad.silverSluggers && ad.silverSluggers[player.id]) {
+    html += '<span class="award-badge award-ss" title="Silver Slugger">🦇</span>';
+  }
+  // All-Star
   if (ad && ad.allStars && ad.allStars[player.id]) {
     html += '<span class="award-badge award-as" title="All-Star">⭐</span>';
   }
