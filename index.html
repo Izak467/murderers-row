@@ -1890,13 +1890,14 @@ function _buildPosDropdownHtml() {
   var html = '';
   for (var i = 0; i < POS.length; i++) {
     var pos = POS[i];
+    if (pos === 'DH') continue;
     var checked = S._pendingPos.indexOf(pos) !== -1;
     html += '<label class="pos-dd-item">'
       + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="togglePendingPos(\'' + pos + '\')">'
       + ' ' + pos + '</label>';
   }
   html += '<div class="pos-dd-footer">'
-    + '<button class="pos-dd-all" onclick="clearPendingPos()">All</button>'
+    + '<button class="pos-dd-all" onclick="clearPendingPos()">Clear</button>'
     + '<button class="pos-dd-ok" onclick="applyPosFilter()">OK</button>'
     + '</div>';
   return html;
