@@ -368,13 +368,44 @@ body::before {
   overflow: hidden;
 }
 .roster-card-header {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   background: #0f1f38;
 }
 .roster-title { font-size: 12px; color: var(--muted); }
 .roster-title strong { color: var(--cream); }
+
+/* ── Roster filter bar ── */
+#roster-filters { display: none; gap: 6px; align-items: center; flex-wrap: wrap; }
+.filter-chip {
+  padding: 3px 11px; font-size: 11px; font-weight: 700; cursor: pointer;
+  border-radius: 12px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  white-space: nowrap; transition: border-color .15s, color .15s, background .15s;
+}
+.filter-chip.active { border-color: var(--gold); color: var(--gold); background: rgba(201,164,74,.15); }
+.pos-dd-wrap { position: relative; display: inline-block; }
+.pos-dropdown {
+  position: absolute; top: calc(100% + 5px); left: 0; z-index: 200;
+  background: var(--surface); border: 1px solid var(--border-lt);
+  border-radius: 9px; padding: 8px; min-width: 150px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.65); display: none;
+}
+.pos-dropdown.open { display: block; }
+.pos-dd-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  cursor: pointer; border-radius: 5px; font-size: 13px; color: var(--cream-dim);
+  user-select: none;
+}
+.pos-dd-item:hover { background: var(--surface2); }
+.pos-dd-item input[type=checkbox] { accent-color: var(--gold); cursor: pointer; width:14px; height:14px; }
+.pos-dd-footer { display:flex; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+.pos-dd-all { flex:1; padding:5px 8px; border-radius:5px; background:transparent; border:1px solid var(--border); color:var(--muted); cursor:pointer; font-size:11px; font-weight:700; }
+.pos-dd-ok  { flex:1; padding:5px 8px; border-radius:5px; background:var(--gold-dk); border:none; color:var(--gold-lt); font-weight:800; cursor:pointer; font-size:11px; }
+
+/* ── Mode desc reserved height so Start Game doesn't jump ── */
+#mode-desc { min-height: 18px; }
 
 .table-wrap { overflow-x: auto; }
 .roster-table {
@@ -796,7 +827,7 @@ body::before {
   <div class="landing-btns">
     <div class="mode-selector">
       <button class="mode-btn active" id="mode-normal" onclick="selectMode('normal')">Normal</button>
-      <button class="mode-btn hard-mode-btn" id="mode-hard" onclick="selectMode('hard')">☠ Hard Mode</button>
+      <button class="mode-btn hard-mode-btn" id="mode-hard" onclick="selectMode('hard')">☠ Stats Hidden</button>
     </div>
     <div id="mode-desc" style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:14px">Stat cards visible · shared leaderboard</div>
     <button class="start-btn" onclick="startGame()">Start Game</button>
@@ -864,6 +895,13 @@ body::before {
   <div class="roster-card">
     <div class="roster-card-header">
       <div class="roster-title" id="roster-title">Spinning…</div>
+      <div id="roster-filters">
+        <button class="filter-chip" id="avail-filter-btn" onclick="toggleAvailableFilter()">Available only</button>
+        <div class="pos-dd-wrap">
+          <button class="filter-chip" id="pos-filter-btn" onclick="togglePosDropdown(event)">Position ▾</button>
+          <div class="pos-dropdown" id="pos-dropdown" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
     </div>
     <div id="roster-body"></div>
   </div>
@@ -1110,6 +1148,8 @@ var S = {
   pendingAssign: null, // { playerIdx, posIdx, playerName, posName }
   awardData:    null, // { ss: {playerId: true} } — fetched per round
   hardMode:     false,
+  posFilter:    [],   // position names to show; empty = all
+  _pendingPos:  [],   // staged in dropdown before OK
 };
 
 function teamLogoUrl(abbr) {
@@ -1260,8 +1300,8 @@ function selectMode(m) {
   document.getElementById('mode-hard').classList.toggle('active', m === 'hard');
   var desc = document.getElementById('mode-desc');
   if (desc) desc.textContent = m === 'hard'
-    ? '☠ Stats hidden · separate Hard Mode leaderboard'
-    : 'Stat cards visible · shared leaderboard';
+    ? 'Stats hidden · separate leaderboard'
+    : 'Stats visible · shared leaderboard';
 }
 
 // ─── Stat color tint (Excel-style red→yellow→green gradient) ─────────────────
@@ -1613,16 +1653,19 @@ function renderRoster() {
     title.innerHTML = 'Loading roster…';
     body.innerHTML  = '<div class="load-state"><div class="spinner"></div>Fetching '+
       (S.spin ? S.spin.teamName+' '+S.spin.year : '')+'…</div>';
+    updateFilterBar(false);
     return;
   }
   if (S.loadError) {
     title.innerHTML = 'Error';
     body.innerHTML  = '<div class="err-box">'+S.loadError+'</div>';
+    updateFilterBar(false);
     return;
   }
   if (!S.spin || !S.allPlayers) {
     title.innerHTML = 'Spinning…';
     body.innerHTML  = '';
+    updateFilterBar(false);
     return;
   }
 
@@ -1632,12 +1675,17 @@ function renderRoster() {
     if (S.lineup[pi]) pickedIds[S.lineup[pi].player.id] = true;
   }
 
-  // Filter players: always exclude picked + no-slot players; optionally show only available
+  // Filter players: always exclude picked + no-slot players; optionally show only available / by position
   var players = sortedPlayers().filter(function(p) {
     if (pickedIds[p.id]) return false;
     var slots = eligibleSlotsFor(p);
     if (slots.available.length + slots.filled.length === 0) return false;
     if (S.availableOnly && slots.available.length === 0) return false;
+    if (S.posFilter.length > 0) {
+      var allIdxs = slots.available.concat(slots.filled);
+      var matchPos = allIdxs.some(function(idx) { return S.posFilter.indexOf(POS[idx]) !== -1; });
+      if (!matchPos) return false;
+    }
     return true;
   });
 
@@ -1647,18 +1695,10 @@ function renderRoster() {
     movingPlayer = S.lineup[S.movingSlotIdx].player;
   }
 
-  var filterBtn = '<button onclick="toggleAvailableFilter()" style="'
-    + 'margin-left:10px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;'
-    + 'border-radius:12px;border:1px solid '+(S.availableOnly ? 'var(--gold)' : 'var(--border)')+';'
-    + 'background:'+(S.availableOnly ? 'var(--gold-dk)' : 'transparent')+';'
-    + 'color:'+(S.availableOnly ? 'var(--gold)' : 'var(--muted)')+';'
-    + 'min-width:118px;white-space:nowrap;transition:all .15s;">'
-    + '<span style="display:inline-block;width:12px;text-align:left">'+(S.availableOnly ? '✓' : '')+'</span> Available only'
-    + '</button>';
   title.innerHTML = '<strong>'+S.spin.teamName+' · '+S.spin.year+'</strong>'
     + ' <span style="color:var(--muted);font-weight:400">('+players.length+' players)</span>'
-    + filterBtn
     + (S.movingSlotIdx !== -1 ? ' <span style="color:var(--gold);font-size:11px">— Move mode active</span>' : '');
+  updateFilterBar(true);
 
   var mobile = window.innerWidth <= 640;
 
@@ -1813,15 +1853,86 @@ function buildConfirmBar() {
   if (!pa) return '';
   return '<div class="confirm-bar">'
     +'<div class="confirm-bar-text">Slot <strong>'+pa.playerName.split(' ').slice(-1)[0]+'</strong> at <strong>'+pa.posName+'</strong>?</div>'
-    +'<button class="confirm-yes-btn" onclick="confirmAssign()">✓ Lock In</button>'
+    +'<button class="confirm-yes-btn" onclick="confirmAssign()">✓ Sign \'Em</button>'
     +'<button class="confirm-no-btn" onclick="cancelAssign()">Cancel</button>'
     +'</div>';
 }
 
-function toggleAvailableFilter() {
-  S.availableOnly = !S.availableOnly;
+function updateFilterBar(show) {
+  var bar = document.getElementById('roster-filters');
+  if (!bar) return;
+  if (show !== undefined) bar.style.display = show ? 'flex' : 'none';
+
+  var availBtn = document.getElementById('avail-filter-btn');
+  if (availBtn) availBtn.className = 'filter-chip' + (S.availableOnly ? ' active' : '');
+
+  var posBtn = document.getElementById('pos-filter-btn');
+  if (posBtn) {
+    posBtn.textContent = S.posFilter.length === 0 ? 'Position ▾' : 'Position (' + S.posFilter.length + ') ▾';
+    posBtn.className = 'filter-chip' + (S.posFilter.length > 0 ? ' active' : '');
+  }
+}
+
+function togglePosDropdown(e) {
+  if (e) e.stopPropagation();
+  var dd = document.getElementById('pos-dropdown');
+  if (!dd) return;
+  if (dd.classList.contains('open')) {
+    dd.classList.remove('open');
+  } else {
+    S._pendingPos = S.posFilter.slice();
+    dd.innerHTML = _buildPosDropdownHtml();
+    dd.classList.add('open');
+  }
+}
+
+function _buildPosDropdownHtml() {
+  var html = '';
+  for (var i = 0; i < POS.length; i++) {
+    var pos = POS[i];
+    var checked = S._pendingPos.indexOf(pos) !== -1;
+    html += '<label class="pos-dd-item">'
+      + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="togglePendingPos(\'' + pos + '\')">'
+      + ' ' + pos + '</label>';
+  }
+  html += '<div class="pos-dd-footer">'
+    + '<button class="pos-dd-all" onclick="clearPendingPos()">All</button>'
+    + '<button class="pos-dd-ok" onclick="applyPosFilter()">OK</button>'
+    + '</div>';
+  return html;
+}
+
+function togglePendingPos(pos) {
+  var idx = S._pendingPos.indexOf(pos);
+  if (idx === -1) S._pendingPos.push(pos);
+  else S._pendingPos.splice(idx, 1);
+}
+
+function clearPendingPos() {
+  S._pendingPos = [];
+  var dd = document.getElementById('pos-dropdown');
+  if (dd) dd.innerHTML = _buildPosDropdownHtml();
+}
+
+function applyPosFilter() {
+  S.posFilter = S._pendingPos.slice();
+  var dd = document.getElementById('pos-dropdown');
+  if (dd) dd.classList.remove('open');
+  updateFilterBar(false);
   renderRoster();
 }
+
+function toggleAvailableFilter() {
+  S.availableOnly = !S.availableOnly;
+  updateFilterBar(false); // update button state instantly, no flicker
+  renderRoster();
+}
+
+// Close position dropdown when clicking outside
+document.addEventListener('click', function() {
+  var dd = document.getElementById('pos-dropdown');
+  if (dd && dd.classList.contains('open')) dd.classList.remove('open');
+});
 
 function setSort(col) {
   if (S.sort.col !== col) {
@@ -2140,6 +2251,7 @@ function startGame(lockTeamId, lockYear) {
   S.skips={team:1,year:1}; S.spin=null; S.allPlayers=[]; S.loadError=null;
   S.spinning=false; S.loading=false; S.sort={col:'games',dir:'desc'};
   S.moveToken=1; S.movingSlotIdx=-1; S.recentYears=[]; S.recentTeams=[]; S.availableOnly=false;
+  S.posFilter=[]; S._pendingPos=[];
   S.hardMode = (_selectedMode === 'hard');
 
   showScreen('game');
