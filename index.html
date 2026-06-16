@@ -811,19 +811,6 @@ body::before {
     <div class="hero-sub">Build the most feared lineup in baseball history · 2005–2025</div>
   </div>
 
-  <div class="card">
-    <div class="card-header">How to Play</div>
-    <ul class="rules-list">
-      <li>Each round, the slot machine spins a random <strong>MLB team + year</strong> (2005–2025, no 2020). Don't like what you got? You have <strong>one team skip</strong> and <strong>one year skip</strong> per game — use them wisely.</li>
-      <li>You'll see the full roster of everyone who suited up that season. Stat cards are color-coded <strong>red → green</strong> so the studs stand out instantly. <strong>🏆</strong> next to a name = MVP that year. <strong>⭐</strong> = All-Star.</li>
-      <li>A player needs <strong>10+ games at a position</strong> to be eligible there. DH requires 15+ games and no primary fielding spot.</li>
-      <li>Fill all 9 slots: <strong>C · 1B · 2B · 3B · SS · LF · CF · RF · DH</strong>. Use <strong>Available Only</strong> to see who still fits open slots, or the <strong>Position</strong> filter to shop by spot.</li>
-      <li>Slots lock once filled — but you get one <strong>↔ Move Token</strong> to reassign any placed player to another eligible open position.</li>
-      <li>Scored on <strong>AVG, OBP, SLG, HR, RBI, R, and SB</strong> — benchmarked against historical averages, adjusted for era and park, and weighted by games played. Durability counts. The curve is brutal: 162-0 demands elite production at every slot.</li>
-      <li><strong>☠ Stats Hidden</strong> strips all stat cards — you're building on name recognition and gut alone. Scores go to a separate leaderboard.</li>
-    </ul>
-  </div>
-
   <div class="landing-btns">
     <div class="mode-selector">
       <button class="mode-btn active" id="mode-normal" onclick="selectMode('normal')">Normal</button>
@@ -831,6 +818,18 @@ body::before {
     </div>
     <div id="mode-desc" style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:14px">Stat cards visible · shared leaderboard</div>
     <button class="start-btn" onclick="startGame()">Start Game</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">How to Play</div>
+    <ul class="rules-list">
+      <li>Each round, the slot machine spins a random <strong>MLB team + year</strong> (2005–2025, no 2020). Don't like what you got? You have <strong>one team skip</strong> and <strong>one year skip</strong> per game.</li>
+      <li>Browse the full roster of everyone who suited up that season. Stat cards are color-coded <strong>red → green</strong> so the studs stand out. <strong>🏆</strong> next to a name = MVP that year. <strong>⭐</strong> = All-Star.</li>
+      <li>A player needs <strong>10+ games at a position</strong> to be eligible there.</li>
+      <li>Fill all 9 slots: <strong>C · 1B · 2B · 3B · SS · LF · CF · RF · DH</strong>. Use <strong>Available Only</strong> or the <strong>Position</strong> filter to find the right fits fast.</li>
+      <li>Slots lock once filled — but you get one <strong>↔ Move Token</strong> to reassign any placed player to another open position they qualify for.</li>
+      <li>Scored on <strong>AVG, OBP, SLG, HR, RBI, R, and SB</strong> — era- and park-adjusted, weighted by games played. Durability counts. 162-0 takes elite production everywhere.</li>
+    </ul>
   </div>
 
   <div id="landing-fb-strip" style="display:none" class="landing-fb-strip">
