@@ -793,37 +793,76 @@ body::before {
   .fl-name { font-size: 13px; }
 }
 
-/* ─── Era Selector ─────────────────────────────────────────── */
-.era-selector { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
-@media (max-width: 640px) { .era-selector { grid-template-columns: 1fr; } }
-.era-card {
+/* ─── Era Panel ─────────────────────────────────────────────── */
+.era-panel {
   background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 12px; padding: 20px 18px;
-  display: flex; flex-direction: column; gap: 8px;
-  transition: border-color .2s, transform .15s;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 16px;
 }
-.era-card:hover { border-color: var(--gold-dk); transform: translateY(-2px); }
-.era-card-icon { font-size: 26px; line-height: 1; }
-.era-card-name { font-family: Georgia, serif; font-size: 18px; font-weight: 700; color: var(--gold); }
-.era-card-years { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-top: -2px; }
-.era-card-desc { font-size: 12px; color: var(--cream-dim); line-height: 1.6; flex: 1; margin-top: 4px; }
-.era-play-row { display: flex; gap: 8px; margin-top: 10px; }
-.era-play-btn {
-  flex: 1; padding: 11px 8px;
+.era-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.era-tab {
+  flex: 1;
+  background: transparent; border: none;
+  border-right: 1px solid var(--border);
+  padding: 14px 8px 12px;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: background .15s;
+}
+.era-tab:last-child { border-right: none; }
+.era-tab:hover { background: var(--surface2); }
+.era-tab.active { background: var(--surface2); box-shadow: inset 0 -3px 0 var(--gold); }
+.era-tab-icon { font-size: 20px; line-height: 1; }
+.era-tab-name { font-family: Georgia, serif; font-size: 14px; font-weight: 700; color: var(--gold); }
+.era-tab-years { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+.era-desc-area { padding: 18px 20px 14px; min-height: 80px; }
+.era-desc-text { font-size: 13px; color: var(--cream-dim); line-height: 1.65; }
+.era-actions {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 20px 18px;
+}
+.hard-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+}
+.hard-toggle input { display: none; }
+.hard-toggle-track {
+  width: 38px; height: 21px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  position: relative;
+  transition: background .2s, border-color .2s;
+  flex-shrink: 0;
+}
+.hard-toggle input:checked ~ .hard-toggle-track {
+  background: rgba(220,70,70,0.25);
+  border-color: rgba(220,80,80,0.6);
+}
+.hard-toggle-thumb {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 15px; height: 15px;
+  background: var(--muted);
+  border-radius: 50%;
+  transition: transform .2s, background .2s;
+}
+.hard-toggle input:checked ~ .hard-toggle-track .hard-toggle-thumb {
+  transform: translateX(17px);
+  background: #f08080;
+}
+.hard-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; }
+.hard-toggle:has(input:checked) .hard-toggle-label { color: #f08080; }
+.era-start-btn {
+  margin-left: auto;
+  padding: 11px 28px;
   background: var(--gold); color: #0d1b2a;
-  border: none; border-radius: 6px; font-weight: 700; font-size: 13px;
+  border: none; border-radius: 6px; font-weight: 700; font-size: 14px;
   cursor: pointer; transition: background .15s;
 }
-.era-play-btn:hover { background: var(--gold-lt); }
-.era-hard-btn {
-  padding: 11px 12px;
-  background: transparent; color: #f08080;
-  border: 1px solid rgba(220,80,80,0.4); border-radius: 6px;
-  font-weight: 700; font-size: 11px; cursor: pointer;
-  transition: all .15s; white-space: nowrap;
-}
-.era-hard-btn:hover { background: rgba(180,60,60,0.15); border-color: #c05050; }
+.era-start-btn:hover { background: var(--gold-lt); }
 
 /* ─── Era theme: Steroid (purple) ──────────────────────────── */
 body.era-steroid {
@@ -879,37 +918,35 @@ body.era-nostalgia .roster-table tr:hover td { background: var(--surface2); }
     <div class="hero-sub">Build the most feared lineup in baseball history · Choose your era</div>
   </div>
 
-  <!-- Era selector -->
-  <div class="era-selector">
-    <div class="era-card">
-      <div class="era-card-icon">📺</div>
-      <div class="era-card-name">Nostalgia Era</div>
-      <div class="era-card-years">1969 – 1993</div>
-      <div class="era-card-desc">From the Big Red Machine to the Iron Man. Rickey Henderson stole bases before you could blink, Tony Gwynn made .300 look like a down year, and the stolen base was a legitimate weapon of war. Your grandfather's game at its absolute finest.</div>
-      <div class="era-play-row">
-        <button class="era-play-btn" onclick="startGameWithEra('nostalgia')">▶ Play</button>
-        <button class="era-hard-btn" onclick="startGameWithEra('nostalgia', true)">☠ Hard</button>
-      </div>
+  <!-- Era selector panel -->
+  <div class="era-panel">
+    <div class="era-tabs">
+      <button class="era-tab active" data-era="modern" onclick="selectEra('modern')">
+        <span class="era-tab-icon">📊</span>
+        <span class="era-tab-name">Modern Era</span>
+        <span class="era-tab-years">2005 – 2025</span>
+      </button>
+      <button class="era-tab" data-era="steroid" onclick="selectEra('steroid')">
+        <span class="era-tab-icon">💉</span>
+        <span class="era-tab-name">Steroid Era</span>
+        <span class="era-tab-years">1995 – 2004</span>
+      </button>
+      <button class="era-tab" data-era="nostalgia" onclick="selectEra('nostalgia')">
+        <span class="era-tab-icon">📺</span>
+        <span class="era-tab-name">Nostalgia Era</span>
+        <span class="era-tab-years">1969 – 1993</span>
+      </button>
     </div>
-    <div class="era-card">
-      <div class="era-card-icon">💉</div>
-      <div class="era-card-name">Steroid Era</div>
-      <div class="era-card-years">1995 – 2004</div>
-      <div class="era-card-desc">McGwire hit 70. Sosa hit 66. Bonds hit 73. Nobody in the commissioner's office was asking too many questions. The most historically offensive stretch in baseball history — and we mean that both ways.</div>
-      <div class="era-play-row">
-        <button class="era-play-btn" onclick="startGameWithEra('steroid')">▶ Play</button>
-        <button class="era-hard-btn" onclick="startGameWithEra('steroid', true)">☠ Hard</button>
-      </div>
+    <div class="era-desc-area">
+      <div class="era-desc-text" id="era-desc-text">Launch angles are optimized, the shift is banned, and every front office has a MIT grad running the numbers. From Pujols to Ohtani, the deepest and most statistically analyzed player pool in history. Build wisely.</div>
     </div>
-    <div class="era-card">
-      <div class="era-card-icon">📊</div>
-      <div class="era-card-name">Modern Era</div>
-      <div class="era-card-years">2005 – 2025</div>
-      <div class="era-card-desc">Launch angles are optimized, the shift is banned, and every front office has a MIT grad running the numbers. From Pujols to Ohtani, the deepest and most statistically analyzed player pool in history. Build wisely.</div>
-      <div class="era-play-row">
-        <button class="era-play-btn" onclick="startGameWithEra('modern')">▶ Play</button>
-        <button class="era-hard-btn" onclick="startGameWithEra('modern', true)">☠ Hard</button>
-      </div>
+    <div class="era-actions">
+      <label class="hard-toggle">
+        <input type="checkbox" id="hard-mode-toggle">
+        <span class="hard-toggle-track"><span class="hard-toggle-thumb"></span></span>
+        <span class="hard-toggle-label">☠ Hard Mode</span>
+      </label>
+      <button class="era-start-btn" onclick="startSelectedEra()">▶ Start</button>
     </div>
   </div>
 
@@ -1521,6 +1558,28 @@ function applyEraTheme(era) {
   root.style.setProperty('--border',    t.border);
   root.style.setProperty('--border-lt', t.borderLt);
   root.style.setProperty('--muted',     t.muted);
+}
+
+var _selectedEra = 'modern';
+var _ERA_DESCS = {
+  modern:   'Launch angles are optimized, the shift is banned, and every front office has a MIT grad running the numbers. From Pujols to Ohtani, the deepest and most statistically analyzed player pool in history. Build wisely.',
+  steroid:  'McGwire hit 70. Sosa hit 66. Bonds hit 73. Nobody in the commissioner\'s office was asking too many questions. The most historically offensive stretch in baseball history — and we mean that both ways.',
+  nostalgia:'From the Big Red Machine to the Iron Man. Rickey Henderson stole bases before you could blink, Tony Gwynn made .300 look like a down year, and the stolen base was a legitimate weapon of war. Your dad\'s game at its absolute finest.'
+};
+
+function selectEra(eraKey) {
+  _selectedEra = eraKey;
+  applyEraTheme(eraKey);
+  document.querySelectorAll('.era-tab').forEach(function(tab) {
+    tab.classList.toggle('active', tab.dataset.era === eraKey);
+  });
+  var el = document.getElementById('era-desc-text');
+  if (el) el.textContent = _ERA_DESCS[eraKey] || '';
+}
+
+function startSelectedEra() {
+  var hard = document.getElementById('hard-mode-toggle').checked;
+  startGameWithEra(_selectedEra, hard);
 }
 
 function startGameWithEra(eraKey, hard) {
@@ -2377,6 +2436,7 @@ function showScreen(name) {
   document.getElementById('screen-'+name).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
   if (name === 'landing') {
+    selectEra(_selectedEra || 'modern');
     renderHistory();
     loadLandingFbStrip();
   }
