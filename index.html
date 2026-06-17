@@ -1263,7 +1263,7 @@ body.era-deadball::after {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.258 5.63 5.906-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
       Share Score
     </button>
-    <button class="copy-btn" id="copy-btn" onclick="copyScore()">🔗 Copy Link</button>
+    <button class="copy-btn" id="copy-btn" onclick="copyScore()">📤 Share</button>
   </div>
 </div>
 
@@ -4677,10 +4677,18 @@ function shareScore() {
 function copyScore() {
   if (!S.lastResult) return;
   var url = window.location.origin + window.location.pathname + '#lineup=' + encodeLineup();
+  var w = S.lastResult.wins;
+  var l = 162 - w;
+  var e = w === 162 ? '🏆' : w >= 140 ? '🔥' : w >= 110 ? '⚾' : '😤';
+  var shareText = e + " I just built a " + w + "–" + l + " season in Murderers' Row. Can you beat my lineup?";
+  if (navigator.share) {
+    navigator.share({ title: "Murderers' Row", text: shareText, url: url }).catch(function(){});
+    return;
+  }
   var btn = document.getElementById('copy-btn');
   function onCopied() {
     btn.textContent = '✓ Copied!'; btn.classList.add('copied');
-    setTimeout(function() { btn.textContent = '🔗 Copy Link'; btn.classList.remove('copied'); }, 2000);
+    setTimeout(function() { btn.textContent = '📤 Share'; btn.classList.remove('copied'); }, 2000);
   }
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url).then(onCopied).catch(function() { fallbackCopy(url); onCopied(); });
