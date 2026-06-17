@@ -3198,7 +3198,7 @@ function _svgBall(w) {
 }
 
 // ─── Stat text color (same ramp as statTint but full-opacity for text) ────────
-function statTextColor(value, floor, mid, ceil) {
+function 'var(--cream)' {
   var clamped = Math.max(floor, Math.min(ceil, +value||0));
   var RED=[220,70,70], YEL=[210,185,50], GRN=[50,175,80], rgb, t;
   if (clamped<=mid) {
@@ -4013,12 +4013,18 @@ function onAssignClick(playerIdx, posIdx) {
     completeMove(posIdx);
     return;
   }
-  // If same button clicked again → confirm immediately
+  // Desktop (hover-capable pointer): assign directly on first click
+  var isPointer = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+  if (isPointer) {
+    S.pendingAssign = null;
+    assignPlayer(player, posIdx);
+    return;
+  }
+  // Touch (mobile): two-step confirm flow
   if (S.pendingAssign && S.pendingAssign.playerIdx === playerIdx && S.pendingAssign.posIdx === posIdx) {
     confirmAssign();
     return;
   }
-  // First click → show confirmation
   S.pendingAssign = { playerIdx: playerIdx, posIdx: posIdx, playerName: player.name, posName: POS[posIdx] };
   renderRoster();
 }
@@ -4415,20 +4421,20 @@ function showResults() {
     }
     document.getElementById('agg-row').innerHTML =
       '<div class="agg-section-lbl">Slash Line</div><div class="agg-chips">'
-      +chip(fmtSlash(a.avg),       'AVG', statTextColor(a.avg,      SR3.avg[0],    SR3.avg[1],    SR3.avg[2]))
-      +chip(fmtSlash(a.obp),       'OBP', statTextColor(a.obp,      SC.FLOOR.obp,  obpMid2,       SC.CEIL.obp))
-      +chip(fmtSlash(a.slg),       'SLG', statTextColor(a.slg,      SC.FLOOR.slg,  slgMid2,       SC.CEIL.slg))
-      +chip(fmtSlash(a.obp+a.slg), 'OPS', statTextColor(a.obp+a.slg,SR3.ops[0],    SR3.ops[1],    SR3.ops[2]))
+      +chip(fmtSlash(a.avg),       'AVG', 'var(--cream)')
+      +chip(fmtSlash(a.obp),       'OBP', 'var(--cream)')
+      +chip(fmtSlash(a.slg),       'SLG', 'var(--cream)')
+      +chip(fmtSlash(a.obp+a.slg), 'OPS', 'var(--cream)')
       +'</div><div class="agg-section-lbl">Totals</div><div class="agg-chips">'
-      +chip(Math.round(a.hr),   'HR',  statTextColor(a.hr,   SR3.hr[0]*9,  SR3.hr[1]*9,  SR3.hr[2]*9))
-      +chip(Math.round(a.rbi),  'RBI', statTextColor(a.rbi,  SR3.rbi[0]*9, SR3.rbi[1]*9, SR3.rbi[2]*9))
-      +chip(Math.round(a.runs), 'R',   statTextColor(a.runs, SR3.r[0]*9,   SR3.r[1]*9,   SR3.r[2]*9))
-      +chip(Math.round(a.sb),   'SB',  statTextColor(a.sb,   SR3.sb[0]*9,  SR3.sb[1]*9,  SR3.sb[2]*9))
+      +chip(Math.round(a.hr),   'HR',  'var(--cream)')
+      +chip(Math.round(a.rbi),  'RBI', 'var(--cream)')
+      +chip(Math.round(a.runs), 'R',   'var(--cream)')
+      +chip(Math.round(a.sb),   'SB',  'var(--cream)')
       +'</div><div class="agg-section-lbl">Per Player</div><div class="agg-chips">'
-      +chip((a.hr/9).toFixed(1),   'HR',  statTextColor(a.hr/9,   SR3.hr[0],  SR3.hr[1],  SR3.hr[2]))
-      +chip((a.rbi/9).toFixed(1),  'RBI', statTextColor(a.rbi/9,  SR3.rbi[0], SR3.rbi[1], SR3.rbi[2]))
-      +chip((a.runs/9).toFixed(1), 'R',   statTextColor(a.runs/9, SR3.r[0],   SR3.r[1],   SR3.r[2]))
-      +chip((a.sb/9).toFixed(1),   'SB',  statTextColor(a.sb/9,   SR3.sb[0],  SR3.sb[1],  SR3.sb[2]))
+      +chip((a.hr/9).toFixed(1),   'HR',  'var(--cream)')
+      +chip((a.rbi/9).toFixed(1),  'RBI', 'var(--cream)')
+      +chip((a.runs/9).toFixed(1), 'R',   'var(--cream)')
+      +chip((a.sb/9).toFixed(1),   'SB',  'var(--cream)')
       +'</div>';
   })();
 
