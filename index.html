@@ -1741,7 +1741,7 @@ var MVP_RANKS = {
   "Mookie Betts|2018": 1,
   "Mike Trout|2018": 2,
   "Jose Ramirez|2018": 3,
-  "J. D. Martinez|2018": 4,
+  "JD Martinez|2018": 4,
   "Alex Bregman|2018": 5,
   "Mike Trout|2019": 1,
   "Alex Bregman|2019": 2,
@@ -1752,7 +1752,7 @@ var MVP_RANKS = {
   "Christian Yelich|2019": 2,
   "Anthony Rendon|2019": 3,
   "Ketel Marte|2019": 4,
-  "Ronald Acuña|2019": 5,
+  "Ronald Acuña Jr.|2019": 5,
   "Shohei Ohtani|2021": 1,
   "Vladimir Guerrero Jr.|2021": 2,
   "Marcus Semien|2021": 3,
@@ -1773,7 +1773,7 @@ var MVP_RANKS = {
   "Nolan Arenado|2022": 3,
   "Freddie Freeman|2022": 4,
   "Mookie Betts|2022": 5,
-  "Ronald Acuña|2023": 1,
+  "Ronald Acuña Jr.|2023": 1,
   "Mookie Betts|2023": 2,
   "Freddie Freeman|2023": 3,
   "Matt Olson|2023": 4,
@@ -3185,7 +3185,7 @@ function simulate() {
 function pick(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
 function sleep(ms) { return new Promise(function(r){setTimeout(r,ms);}); }
 function busy() { return S.spinning || S.loading; }
-function fmtSlash(n) { return n ? n.toFixed(3).replace(/^0\./,'.') : '.---'; }
+function fmtSlash(n) { return (n != null && isFinite(n)) ? n.toFixed(3).replace(/^0\./,'.') : '.---'; }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ─── Era theme application ────────────────────────────────────────────────────
@@ -3513,7 +3513,7 @@ function loadRoster() {
   return fetchRoster(S.spin.teamId, year).then(function(players) {
     S.allPlayers = players;
   }).catch(function(e) {
-    S.loadError = 'Could not load ' + S.spin.teamName + ' ' + year + ' roster. Try a skip.';
+    S.loadError = 'Could not load ' + esc(S.spin.teamName) + ' ' + year + ' roster. Try a skip.';
   }).then(function() {
     S.loading = false;
     refreshSkipBtns();
@@ -3824,7 +3824,7 @@ function buildConfirmBar() {
   var pa = S.pendingAssign;
   if (!pa) return '';
   return '<div class="confirm-bar">'
-    +'<div class="confirm-bar-text">Slot <strong>'+pa.playerName.split(' ').slice(-1)[0]+'</strong> at <strong>'+pa.posName+'</strong>?</div>'
+    +'<div class="confirm-bar-text">Slot <strong>'+esc(pa.playerName.split(' ').slice(-1)[0])+'</strong> at <strong>'+pa.posName+'</strong>?</div>'
     +'<button class="confirm-yes-btn" onclick="confirmAssign()">✓ Sign \'Em</button>'
     +'<button class="confirm-no-btn" onclick="cancelAssign()">Cancel</button>'
     +'</div>';
@@ -4093,7 +4093,7 @@ function showResults() {
   }
   var spotHtml = '';
   if (bestSlot)  spotHtml += '<span class="fl-spotlight-best">&#9650; <strong>' + bestSlot.name  + '</strong> (' + bestSlot.pos  + ') · ' + fmtSlash(bestSlot.ops)  + ' OPS</span>';
-  if (worstSlot && worstSlot.pos !== bestSlot.pos)
+  if (worstSlot && bestSlot && worstSlot.pos !== bestSlot.pos)
     spotHtml += '<span class="fl-spotlight-worst">&#9660; <strong>' + worstSlot.name + '</strong> (' + worstSlot.pos + ') · ' + fmtSlash(worstSlot.ops) + ' OPS</span>';
   document.getElementById('fl-spotlight').innerHTML = spotHtml;
   document.getElementById('fl-spotlight').className = 'fl-spotlight' + (spotHtml ? '' : ' hidden');
