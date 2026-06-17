@@ -547,9 +547,9 @@ body::before {
 .beta-badge { font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; }
 
 /* Aggregate big numbers */
-.agg-section-lbl { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin: 10px 0 6px; }
+.agg-section-lbl { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin: 8px 0 0; grid-column: 1 / -1; }
 .agg-section-lbl:first-child { margin-top: 0; }
-.agg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.agg-chips { display: contents; }
 .agg-chip-val { font-size: 18px; font-weight: 700; font-family: Georgia, serif; }
 
 /* Dashboard tabs */
@@ -611,14 +611,14 @@ body::before {
 .ld-silver .ld-rank { color: #b8b8c0; font-weight: 700; }
 .ld-bronze .ld-rank { color: #b07040; font-weight: 700; }
 .agg-row {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
   padding-top: 12px; margin-top: 4px;
   border-top: 1px solid var(--border);
 }
 .agg-chip {
   display: flex; flex-direction: column; align-items: center;
   background: var(--bg); border: 1px solid var(--border);
-  border-radius: 6px; padding: 6px 10px; flex: 1; min-width: 52px;
+  border-radius: 6px; padding: 6px 10px;
 }
 .agg-chip-val { font-size: 15px; font-weight: 700; color: var(--cream); font-family: Georgia, serif; }
 .agg-chip-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-top: 2px; }
