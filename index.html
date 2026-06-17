@@ -310,7 +310,7 @@ body::before {
   color: var(--muted);
 }
 .slot-machine-record {
-  font-size: 12px; font-weight: 700; color: var(--muted);
+  font-size: 14px; font-weight: 700; color: var(--muted);
   text-transform: uppercase; letter-spacing: 1.5px;
   text-align: center;
 }
@@ -562,7 +562,7 @@ body::before {
 .lu-list { margin-top: 8px; }
 .lu-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .lu-row:last-child { border-bottom: none; }
-.lu-stripe { width: 3px; border-radius: 2px; align-self: stretch; min-height: 36px; flex-shrink: 0; }
+
 .lu-pos { font-size: 9px; font-weight: 800; color: var(--muted); width: 20px; text-align: center; letter-spacing: 1px; flex-shrink: 0; }
 .lu-body { flex: 1; min-width: 0; }
 .lu-name { font-size: 13px; font-weight: 700; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1148,6 +1148,7 @@ body.era-deadball::after {
       </div>
 
     </div>
+    <div style="text-align:center;padding:2px 0 4px"><span id="sm-record" class="slot-machine-record"></span></div>
     <div class="slot-displays">
       <div class="slot-col">
         <div class="slot-col-lbl">Year</div>
@@ -1155,7 +1156,6 @@ body.era-deadball::after {
       </div>
       <div class="slot-col" style="flex:1">
         <div class="slot-col-lbl">Team</div>
-        <span id="sm-record" class="slot-machine-record"></span>
         <div class="slot-win" id="win-team">
           <img id="sv-team-logo" class="team-logo" src="" alt="" onerror="this.style.display='none'">
           <div class="slot-val team" id="sv-team">—</div>
@@ -1227,7 +1227,7 @@ body.era-deadball::after {
     <div class="res-divider">Team Totals</div>
     <div class="agg-row" id="agg-row"></div>
     <div class="sb-total" id="sb-total"></div>
-    <div class="res-divider">OBP vs SLG <span class="beta-badge">BETA</span></div>
+    <div class="res-divider">Patience vs Power <span class="beta-badge">BETA</span></div>
     <div id="dash-plot"></div>
     <div class="res-divider">Leaders</div>
     <div id="dash-leaders"></div>
@@ -4287,7 +4287,6 @@ function showResults() {
         if (slot.awards.ss)  bdg += '<span class="fl-award-badge">'+_svgBall(14)+'</span>';
       }
       html += '<div class="lu-row">'
-        +'<div class="lu-stripe" style="background:'+sc+'"></div>'
         +'<div class="lu-pos">'+POS[i]+'</div>'
         +'<div class="lu-body">'
           +'<div class="lu-name">'+esc(slot.player.name)+(bdg?' <span style="margin-left:3px">'+bdg+'</span>':'')+'</div>'
