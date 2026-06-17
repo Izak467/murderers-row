@@ -310,8 +310,9 @@ body::before {
   color: var(--muted);
 }
 .slot-machine-record {
-  font-size: 10px; font-weight: 700; color: var(--cream-dim);
-  text-transform: uppercase; letter-spacing: 1px;
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  text-align: center;
 }
 .slot-displays { display: flex; gap: 10px; }
 .slot-col { display: flex; flex-direction: column; gap: 5px; }
@@ -1153,7 +1154,8 @@ body.era-deadball::after {
         <div class="slot-win" id="win-year"><div class="slot-val year" id="sv-year">—</div></div>
       </div>
       <div class="slot-col" style="flex:1">
-        <div class="slot-col-lbl" style="display:flex;justify-content:space-between;align-items:center"><span>Team</span><span id="sm-record" class="slot-machine-record"></span></div>
+        <div class="slot-col-lbl">Team</div>
+        <span id="sm-record" class="slot-machine-record"></span>
         <div class="slot-win" id="win-team">
           <img id="sv-team-logo" class="team-logo" src="" alt="" onerror="this.style.display='none'">
           <div class="slot-val team" id="sv-team">—</div>
