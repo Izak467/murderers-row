@@ -948,6 +948,110 @@ body.era-nostalgia .move-banner,
 body.era-nostalgia .confirm-bar { background: #0b180e; border-color: var(--gold-dk); }
 body.era-nostalgia .lb-row { border-color: #1a2c1e; }
 body.era-nostalgia .roster-table tr:hover td { background: var(--surface2); }
+
+/* ─── Era textures & new-era themes (overlay via ::after, pointer-events:none) ─ */
+body.era-steroid::after,
+body.era-nostalgia::after,
+body.era-postwar::after,
+body.era-golden::after,
+body.era-deadball::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Steroid: faint diagonal interference lines */
+body.era-steroid::after {
+  background-image:
+    repeating-linear-gradient(72deg, rgba(120,110,200,0.018) 0, rgba(120,110,200,0.018) 1px, transparent 0, transparent 18px);
+}
+
+/* Nostalgia: subtle diagonal stripe (broadcast static) */
+body.era-nostalgia::after {
+  background-image:
+    repeating-linear-gradient(135deg, rgba(94,120,98,0.022) 0px, rgba(94,120,98,0.022) 1px, transparent 1px, transparent 9px);
+}
+
+/* Post-War: dot grid (mid-century modern) */
+body.era-postwar {
+  --bg: #061414;
+  --surface: #0c1e1e;
+  --surface2: #102828;
+  --border: #1a3838;
+  --border-lt: #224e4e;
+  --muted: #4a7272;
+  --navy-lt: #3a6060;
+}
+body.era-postwar .roster-card-header,
+body.era-postwar .roster-table th,
+body.era-postwar .sort-bar { background: #050f0f; }
+body.era-postwar .roster-table td { border-color: #143030; }
+body.era-postwar .ls.filled { background: #081a1a; }
+body.era-postwar .ls.moving { background: #0b2222; }
+body.era-postwar .move-banner,
+body.era-postwar .confirm-bar { background: #081818; border-color: var(--gold-dk); }
+body.era-postwar .lb-row { border-color: #143030; }
+body.era-postwar .roster-table tr:hover td { background: var(--surface2); }
+body.era-postwar::after {
+  background-image: radial-gradient(circle at 1px 1px, rgba(74,114,114,0.11) 1px, transparent 0);
+  background-size: 26px 26px;
+}
+
+/* Golden Age: art deco cross-hatch (Roaring 20s amber) */
+body.era-golden {
+  --bg: #160c02;
+  --surface: #221206;
+  --surface2: #2e1a0a;
+  --border: #4e3010;
+  --border-lt: #664018;
+  --muted: #8a6428;
+  --navy-lt: #6e5020;
+}
+body.era-golden .roster-card-header,
+body.era-golden .roster-table th,
+body.era-golden .sort-bar { background: #100800; }
+body.era-golden .roster-table td { border-color: #3c2408; }
+body.era-golden .ls.filled { background: #180e02; }
+body.era-golden .ls.moving { background: #201405; }
+body.era-golden .move-banner,
+body.era-golden .confirm-bar { background: #180e02; border-color: var(--gold-dk); }
+body.era-golden .lb-row { border-color: #3c2408; }
+body.era-golden .roster-table tr:hover td { background: var(--surface2); }
+body.era-golden::after {
+  background-image:
+    repeating-linear-gradient(45deg,  rgba(190,145,45,0.022) 0, rgba(190,145,45,0.022) 1px, transparent 0, transparent 14px),
+    repeating-linear-gradient(-45deg, rgba(190,145,45,0.022) 0, rgba(190,145,45,0.022) 1px, transparent 0, transparent 14px);
+}
+
+/* Dead Ball: burgundy mahogany — horizontal scan lines (old photograph grain) */
+body.era-deadball {
+  --bg: #150808;
+  --surface: #1e1010;
+  --surface2: #271616;
+  --border: #3c2020;
+  --border-lt: #502c2c;
+  --muted: #8a5048;
+  --navy-lt: #6e3e3a;
+}
+body.era-deadball .roster-card-header,
+body.era-deadball .roster-table th,
+body.era-deadball .sort-bar { background: #0f0505; }
+body.era-deadball .roster-table td { border-color: #301818; }
+body.era-deadball .ls.filled { background: #180a0a; }
+body.era-deadball .ls.moving { background: #200e0e; }
+body.era-deadball .move-banner,
+body.era-deadball .confirm-bar { background: #180a0a; border-color: var(--gold-dk); }
+body.era-deadball .lb-row { border-color: #301818; }
+body.era-deadball .roster-table tr:hover td { background: var(--surface2); }
+body.era-deadball::after {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0px, transparent 2px,
+    rgba(200,140,110,0.022) 2px, rgba(200,140,110,0.022) 3px
+  );
+}
 </style>
 </head>
 <body>
@@ -1199,7 +1303,8 @@ var TEAM_HIST_NAMES = {
   146: [{ from: 1993, to: 2011, name: 'Florida Marlins',      abbr: 'FLA' }],
   139: [{ from: 1998, to: 2007, name: 'Tampa Bay Devil Rays', abbr: 'TB'  }],
 };
-\r\nfunction\ getValidTeams\(year\)\ \{
+
+function getValidTeams(year) {
   return TEAMS.filter(function(t) {
     var h = TEAM_HISTORY[t.id];
     if (!h) return true;
@@ -3298,13 +3403,16 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 
 // ─── Era theme application ────────────────────────────────────────────────────
 function applyEraTheme(era) {
-  document.body.classList.remove('era-modern','era-steroid','era-nostalgia');
+  document.body.classList.remove('era-modern','era-steroid','era-nostalgia','era-postwar','era-golden','era-deadball');
   if (era !== 'modern') document.body.classList.add('era-' + era);
   var root = document.documentElement;
   var themes = {
     modern:   { bg:'#0d1b2a', surface:'#132540', surface2:'#1c3355', border:'#2c4a6a', borderLt:'#3d6080', muted:'#6a82a0' },
     steroid:  { bg:'#0b0c1e', surface:'#11102a', surface2:'#181638', border:'#272450', borderLt:'#363062', muted:'#636088' },
-    nostalgia:{ bg:'#0a1410', surface:'#0e1c14', surface2:'#132018', border:'#1e3224', borderLt:'#2a4430', muted:'#5e7862' }
+    nostalgia:{ bg:'#0a1410', surface:'#0e1c14', surface2:'#132018', border:'#1e3224', borderLt:'#2a4430', muted:'#5e7862' },
+    postwar:  { bg:'#061414', surface:'#0c1e1e', surface2:'#102828', border:'#1a3838', borderLt:'#224e4e', muted:'#4a7272' },
+    golden:   { bg:'#160c02', surface:'#221206', surface2:'#2e1a0a', border:'#4e3010', borderLt:'#664018', muted:'#8a6428' },
+    deadball: { bg:'#150808', surface:'#1e1010', surface2:'#271616', border:'#3c2020', borderLt:'#502c2c', muted:'#8a5048' }
   };
   var t = themes[era] || themes.modern;
   root.style.setProperty('--bg',        t.bg);
