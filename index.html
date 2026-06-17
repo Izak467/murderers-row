@@ -3526,10 +3526,28 @@ function loadRoster() {
   S.allPlayers = [];
   S.loadError = null;
   S.awardData = null;
+  S.spin.record = null;
   refreshSkipBtns();
   renderRoster();
 
   var year = S.spin.year;
+  var spinTeamId = S.spin.teamId;
+  apiFetch('/standings?leagueId=103,104&season='+year+'&standingsTypes=regularSeason').then(function(data) {
+    if (!S.spin || S.spin.teamId !== spinTeamId) return;
+    var recs = data.records || [];
+    for (var i = 0; i < recs.length; i++) {
+      var tr = recs[i].teamRecords || [];
+      for (var j = 0; j < tr.length; j++) {
+        if (tr[j].team && tr[j].team.id === spinTeamId) {
+          var lr = tr[j].leagueRecord;
+          S.spin.record = lr.wins + '-' + lr.losses;
+          renderRoster();
+          return;
+        }
+      }
+    }
+  }).catch(function() {});
+
   fetchAwardsForYear(year, S.era).then(function(awards) {
     S.awardData = awards;
     if (!S.loading && !S.spinning && S.allPlayers.length) renderRoster();
@@ -3690,7 +3708,8 @@ function renderRoster() {
   }
 
   title.innerHTML = '<strong>'+esc(S.spin.teamName)+' · '+S.spin.year+'</strong>'
-    + ' <span style="color:var(--muted);font-weight:400">('+players.length+' players)</span>'
+    + (S.spin.record ? ' <span style="color:var(--gold);font-weight:600;font-size:13px"> · '+esc(S.spin.record)+'</span>' : '')
+    + ' <span style="color:var(--muted);font-weight:400;font-size:12px"> ('+players.length+' players)</span>'
     + (S.movingSlotIdx !== -1 ? ' <span style="color:var(--gold);font-size:11px">— Move mode active</span>' : '');
   updateFilterBar(true);
 
