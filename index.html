@@ -4336,6 +4336,7 @@ function showResults() {
 
   // ── Tab 3: Scatter (OBP vs SLG) ─────────────────────────────────────────
   (function() {
+    var SR_sc = getStatRanges(S.era||'modern', S.spin ? S.spin.year : 2024);
     var ERA_BASE = {modern:{obp:.320,slg:.415},steroid:{obp:.335,slg:.430},nostalgia:{obp:.325,slg:.385}};
     var base = ERA_BASE[S.era||'modern'];
     var W=280,H=230,ML=44,MB=34,MT=14,MR=16,pw=W-ML-MR,ph=H-MB-MT;
@@ -4370,7 +4371,7 @@ function showResults() {
     // dots (smallest HR first so large dots don't obscure small)
     pts.sort(function(a,b){return a.hr-b.hr;});
     for (var p=0;p<pts.length;p++) {
-      var pt=pts[p],px2=xp(pt.obp),py2=yp(pt.slg),r=Math.max(6,Math.min(15,6+pt.hr/50*9)),col=_tierCol(pt.ops);
+      var pt=pts[p],px2=xp(pt.obp),py2=yp(pt.slg),r=Math.max(6,Math.min(15,6+pt.hr/50*9)),col=statTextColor(pt.ops,SR_sc.ops[0],SR_sc.ops[1],SR_sc.ops[2]);
       svg+='<circle cx="'+px2.toFixed(1)+'" cy="'+py2.toFixed(1)+'" r="'+r+'" fill="'+col+'" fill-opacity="0.85" stroke="#0d1b2a" stroke-width="1.2"/>';
       var lx=px2+r+3; if(lx+38>W-MR)lx=px2-r-3;
       svg+='<text x="'+lx.toFixed(1)+'" y="'+py2.toFixed(1)+'" dominant-baseline="middle" fill="rgba(240,236,226,0.82)" font-size="8.5" font-family="Georgia,serif">'+esc(pt.name)+'</text>';
