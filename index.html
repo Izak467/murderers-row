@@ -671,6 +671,20 @@ body::before {
 }
 .copy-btn:hover { border-color: var(--cream); color: var(--cream); }
 .copy-btn.copied { border-color: #4caf76; color: #4caf76; }
+.shared-overlay { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.88); display:flex; align-items:center; justify-content:center; padding:16px; }
+.shared-card { background:var(--surface); border:1px solid var(--border-lt); border-radius:14px; padding:24px; max-width:480px; width:100%; max-height:90vh; overflow-y:auto; }
+.shared-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; gap:12px; }
+.shared-title { font-size:15px; font-weight:700; color:var(--gold); letter-spacing:.5px; }
+.shared-era { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:3px; }
+.shared-record { font-size:26px; font-weight:700; color:var(--cream); white-space:nowrap; }
+.shared-slot { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
+.shared-slot:last-of-type { border-bottom:none; }
+.shared-slot-pos { font-size:11px; font-weight:700; color:var(--muted); width:26px; flex-shrink:0; }
+.shared-slot-name { flex:1; font-size:13px; font-weight:600; color:var(--cream); }
+.shared-slot-ctx { font-size:11px; color:var(--muted); }
+.shared-slash { font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.shared-play-btn { width:100%; margin-top:18px; padding:13px; background:var(--gold-dk); color:#000; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:.5px; }
+.shared-play-btn:hover { background:var(--gold-lt); }
 
 /* ─── Landing extras ──────────────────────────────────────────── */
 .landing-btns { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -1249,7 +1263,7 @@ body.era-deadball::after {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.258 5.63 5.906-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
       Share Score
     </button>
-    <button class="copy-btn" id="copy-btn" onclick="copyScore()">📋 Copy</button>
+    <button class="copy-btn" id="copy-btn" onclick="copyScore()">🔗 Copy Link</button>
   </div>
 </div>
 
@@ -4662,16 +4676,22 @@ function shareScore() {
 
 function copyScore() {
   if (!S.lastResult) return;
-  var w = S.lastResult.wins;
-  var l = 162 - w;
-  var emoji = w === 162 ? '🏆' : w >= 140 ? '🔥' : w >= 110 ? '⚾' : '😤';
-  var text = emoji + ' I just built a ' + w + '–' + l + ' season in Murderers\' Row. Can you beat it?\nhttps://murderers-row.net/';
+  var url = window.location.origin + window.location.pathname + '#lineup=' + encodeLineup();
   var btn = document.getElementById('copy-btn');
+  function onCopied() {
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = '🔗 Copy Link'; btn.classList.remove('copied'); }, 2000);
+  }
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(function() {
-      btn.textContent = '✓ Copied!';
-      btn.classList.add('copied');
-      setTimeout(function() { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 2000);
+    navigator.clipboard.writeText(url).then(onCopied).catch(function() { fallbackCopy(url); onCopied(); });
+  } else { fallbackCopy(url); onCopied(); }
+}
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+  document.body.removeChild(ta);
+}, 2000);
     });
   } else {
     var ta = document.createElement('textarea');
@@ -4682,7 +4702,66 @@ function copyScore() {
     setTimeout(function() { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 2000);
   }
 }
+function encodeLineup() {
+  var res = simulate();
+  var slots = [];
+  for (var i = 0; i < 9; i++) {
+    var slot = S.lineup[i];
+    if (!slot) { slots.push(null); continue; }
+    var st = slot.player.stats;
+    slots.push({ n:slot.player.name, y:slot.year, t:slot.teamName,
+      s:{ avg:st.avg, obp:st.obp, slg:st.slg, hr:st.hr, rbi:st.rbi, r:st.runs, sb:st.sb, g:st.games } });
+  }
+  var payload = JSON.stringify({ v:1, e:S.era, w:res.wins, s:slots });
+  try {
+    return btoa(unescape(encodeURIComponent(payload))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  } catch(e) { return ''; }
+}
+function decodeLineup(str) {
+  try {
+    var b64 = str.replace(/-/g,'+').replace(/_/g,'/');
+    var pad = b64 + '==='.slice((b64.length + 3) % 4);
+    return JSON.parse(decodeURIComponent(escape(atob(pad))));
+  } catch(e) { return null; }
+}
+function showSharedLineup(data) {
+  if (!data || data.v !== 1 || !Array.isArray(data.s)) return;
+  var POS_NAMES = ['C','1B','2B','3B','SS','LF','CF','RF','DH'];
+  var ERA_NAMES = { modern:'Modern Era', steroid:'Steroid Era', nostalgia:'Nostalgia Era',
+                    postwar:'Post-War Era', golden:'Golden Age', deadball:'Dead Ball Era' };
+  var losses = 162 - (data.w || 0);
+  var html = '<div class="shared-card">';
+  html += '<div class="shared-header"><div>';
+  html += '<div class="shared-title">⚾ Shared Lineup</div>';
+  html += '<div class="shared-era">' + esc(ERA_NAMES[data.e] || data.e || '') + '</div>';
+  html += '</div><div class="shared-record">' + (data.w || 0) + ' – ' + losses + '</div></div>';
+  for (var i = 0; i < 9; i++) {
+    var slot = data.s[i];
+    html += '<div class="shared-slot"><div class="shared-slot-pos">' + POS_NAMES[i] + '</div>';
+    if (slot && slot.n) {
+      var st = slot.s || {};
+      html += '<div class="shared-slot-name">' + esc(slot.n) + '</div>';
+      html += '<div class="shared-slot-ctx">' + esc(String(slot.y || '')) + ' · ' + esc(slot.t || '') + '</div>';
+      html += '<div class="shared-slash">' + (st.avg||0).toFixed(3) + '/' + (st.obp||0).toFixed(3) + '/' + (st.slg||0).toFixed(3) + '</div>';
+    } else {
+      html += '<div class="shared-slot-name" style="color:var(--muted)">—</div>';
+    }
+    html += '</div>';
+  }
+  html += '<button class="shared-play-btn" onclick="dismissSharedLineup()">▶ Start Your Own Game</button>';
+  html += '</div>';
+  var overlay = document.createElement('div');
+  overlay.className = 'shared-overlay'; overlay.id = 'shared-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+}
+function dismissSharedLineup() {
+  var el = document.getElementById('shared-overlay');
+  if (el) el.parentNode.removeChild(el);
+  try { history.replaceState(null, '', window.location.pathname); } catch(e) {}
+}
 (function(){var _bg;_bg=document.getElementById('bgmvp');if(_bg)_bg.innerHTML=_svgTrophy(1,14);_bg=document.getElementById('bgroy');if(_bg)_bg.innerHTML=_svgFlame(14);_bg=document.getElementById('bgss');if(_bg)_bg.innerHTML=_svgBall(14);_bg=document.getElementById('bgas');if(_bg)_bg.innerHTML=_svgStar(14);})();
+(function(){var m=window.location.hash.match(/^#lineup=([A-Za-z0-9\-_]+)$/);if(!m)return;var d=decodeLineup(m[1]);if(d)showSharedLineup(d);})();
 </script>
 </body>
 </html>
