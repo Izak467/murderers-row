@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -529,16 +529,26 @@ body::before {
 }
 .result-record.landed { animation: recordLand 0.55s cubic-bezier(.3,1.5,.5,1) forwards; }
 .result-record.perfect      { color: var(--gold); text-shadow: 0 0 40px rgba(201,164,74,0.5); }
-.result-record.transcendent { color: var(--gold); }
-.result-record.dominant     { color: #e8d080; }
+.result-record.transcendent { color: #e8d898; }
+.result-record.dominant     { color: var(--cream); }
 .result-record.great        { color: #7abaff; }
-.result-record.good         { color: var(--cream); }
-.result-record.mediocre     { color: var(--cream-dim); }
+.result-record.good         { color: var(--cream-dim); }
+.result-record.mediocre     { color: var(--muted); }
 .result-record.bad          { color: #c07070; }
-.result-tagline { font-size: 16px; color: var(--cream-dim); margin-top: 8px; }
+.result-tagline { font-size: 15px; font-family: Georgia,serif; font-style: italic; color: var(--muted); margin-top: 6px; }
 
-.sb-total { text-align: right; font-size: 12px; color: var(--muted); padding-top: 10px; border-top: 1px solid var(--border); margin-top: 12px; }
-.sb-total strong { color: var(--gold); font-size: 15px; }
+.sb-total { text-align: center; font-size: 11px; color: var(--muted); padding-top: 8px; margin-top: 4px; letter-spacing: 0.5px; }
+
+/* Results section dividers */
+.res-divider { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 16px 0 8px; border-top: 1px solid var(--border); margin-top: 12px; display: flex; align-items: center; gap: 8px; }
+.res-divider:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.beta-badge { font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; }
+
+/* Aggregate big numbers */
+.agg-section-lbl { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin: 10px 0 6px; }
+.agg-section-lbl:first-child { margin-top: 0; }
+.agg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.agg-chip-val { font-size: 18px; font-weight: 700; font-family: Georgia, serif; }
 
 /* Dashboard tabs */
 .dash-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -565,8 +575,9 @@ body::before {
 .hm-th { font-size: 9px; font-weight: 800; color: var(--muted); letter-spacing: 1px; text-align: center; padding: 0 2px 6px; }
 .hm-th-row { font-size: 9px; color: var(--muted); padding: 3px 8px 3px 0; white-space: nowrap; text-align: right; }
 .hm-pos { font-weight: 800; color: var(--muted); font-size: 8px; letter-spacing: 0.5px; }
-.hm-cell-wrap { padding: 2px; }
-.hm-cell { text-align: center; padding: 4px 3px; font-size: 10px; font-weight: 700; font-family: monospace; border-radius: 4px; }
+.hm-table { table-layout: fixed; }
+.hm-cell-wrap { padding: 2px; width: 46px; }
+.hm-cell { text-align: center; padding: 5px 2px; font-size: 10px; font-weight: 700; font-family: monospace; border-radius: 4px; width: 100%; box-sizing: border-box; }
 
 /* Scatter plot */
 .sc-wrap { display: flex; justify-content: center; padding: 4px 0; overflow-x: auto; }
@@ -1103,29 +1114,20 @@ body.era-nostalgia .roster-table tr:hover td { background: var(--surface2); }
   </div>
 
   <div class="card">
-    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      Team Stats
-      <div class="dash-tabs">
-        <button class="dash-tab active" data-tab="lineup"  onclick="switchDashTab('lineup')">Lineup</button>
-        <button class="dash-tab"        data-tab="matrix"  onclick="switchDashTab('matrix')">Matrix</button>
-        <button class="dash-tab"        data-tab="plot"    onclick="switchDashTab('plot')">Plot</button>
-        <button class="dash-tab"        data-tab="wins"    onclick="switchDashTab('wins')">Wins</button>
-        <button class="dash-tab"        data-tab="leaders" onclick="switchDashTab('leaders')">Leaders</button>
-      </div>
-    </div>
     <div id="dash-lineup"></div>
-    <div id="dash-matrix"  style="display:none"></div>
-    <div id="dash-plot"    style="display:none"></div>
-    <div id="dash-wins"    style="display:none"></div>
-    <div id="dash-leaders" style="display:none"></div>
-    <div class="sb-total" id="sb-total"></div>
+    <div class="res-divider">Performance Matrix</div>
+    <div id="dash-matrix"></div>
+    <div class="res-divider">Team Totals</div>
     <div class="agg-row" id="agg-row"></div>
+    <div class="sb-total" id="sb-total"></div>
+    <div class="res-divider">OBP vs SLG <span class="beta-badge">BETA</span></div>
+    <div id="dash-plot"></div>
+    <div class="res-divider">Leaders</div>
+    <div id="dash-leaders"></div>
   </div>
 
-  <div class="card">
-    <div class="card-header">Final Lineup</div>
+  <div style="padding:10px 0 4px">
     <div id="fl-origins"></div>
-    <div id="fl-rows"></div>
   </div>
   <div class="results-btns">
     <button class="play-again-btn" onclick="resetGame()">Play Again</button>
@@ -1197,8 +1199,7 @@ var TEAM_HIST_NAMES = {
   146: [{ from: 1993, to: 2011, name: 'Florida Marlins',      abbr: 'FLA' }],
   139: [{ from: 1998, to: 2007, name: 'Tampa Bay Devil Rays', abbr: 'TB'  }],
 };
-
-function getValidTeams(year) {
+\r\nfunction\ getValidTeams\(year\)\ \{
   return TEAMS.filter(function(t) {
     var h = TEAM_HISTORY[t.id];
     if (!h) return true;
@@ -1261,9 +1262,7 @@ var ERA_CONFIG = {
       g:[40,110,162], avg:[0.220,0.275,0.375], ops:[0.600,0.750,0.960],
       r:[20,55,120],  hr:[0,12,50],            rbi:[15,55,120],
       tb:[60,185,340],sb:[0,20,100]
-    }
-  }
-};
+\ \ \ \ }\r\n\ \ }\r\n};
 
 // ─── Era-specific scoring (ceiling/floor for final lineup totals) ─────────────
 var ERA_SCORING = {
@@ -1280,9 +1279,7 @@ var ERA_SCORING = {
   nostalgia: {
     W:     { avg:.10, obp:.22, slg:.20, hr:.16, rbi:.12, runs:.10, sb:.10 },
     CEIL:  { avg:.310, obp:.390, slg:.480, hr:215, rbi:810, runs:800, sb:340 },
-    FLOOR: { avg:.220, obp:.280, slg:.330, hr:20,  rbi:260, runs:260, sb:0   }
-  }
-};
+\ \ \ \ FLOOR:\ \{\ avg:\.220,\ obp:\.280,\ slg:\.330,\ hr:20,\ \ rbi:260,\ runs:260,\ sb:0\ \ \ }\r\n\ \ }\r\n};
 
 // Scoring weights — AVG/OBP/SLG are rate stats (lineup avg), HR/RBI/R/SB are counting (summed)
 var W     = { avg:.10, obp:.22, slg:.20, hr:.18, rbi:.14, runs:.10, sb:.06 };
@@ -1320,8 +1317,7 @@ var SEASON_AVG = {
   1987:{avg:.265,obp:.333,slg:.413}, 1988:{avg:.259,obp:.326,slg:.384},
   1989:{avg:.261,obp:.329,slg:.389}, 1990:{avg:.259,obp:.328,slg:.388},
   1991:{avg:.256,obp:.326,slg:.387}, 1992:{avg:.255,obp:.323,slg:.376},
-  1993:{avg:.267,obp:.336,slg:.408}
-};
+\ \ 1993:\{avg:\.267,obp:\.336,slg:\.408}\r\n};
 
 // ─── Awards data from SABR Lahman Database 2025 ─────────────────────────────
 // MVP top-5 per league per year; GG = Gold Glove; NOSTALGIA_ALLSTARS = fallback
@@ -3046,12 +3042,70 @@ function getStatRanges(era, year) {
   };
 }
 
+// ─── SVG Award Badges ────────────────────────────────────────────────────────
+var _svgIdCtr = 0;
+function _svgTrophy(rank, w) {
+  w = w||14; var id='tr'+(++_svgIdCtr);
+  var fc=[['#fff0a0','#f0c040','#906010'],['#f0f0f8','#c0c0cc','#606070'],['#f0c090','#c07840','#6a3810']];
+  var sc=[['#c8a030','#f0d060','#a07020'],['#888898','#d0d0dc','#707080'],['#904020','#d09050','#703010']];
+  var num=['rgba(80,40,0,0.6)','rgba(40,40,60,0.55)','rgba(60,25,5,0.55)'];
+  if (rank<1||rank>3) return ''; var f=fc[rank-1],s=sc[rank-1];
+  return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><defs>'
+    +'<linearGradient id="'+id+'c" x1="20%" y1="0%" x2="80%" y2="100%"><stop offset="0%" stop-color="'+f[0]+'"/><stop offset="40%" stop-color="'+f[1]+'"/><stop offset="100%" stop-color="'+f[2]+'"/></linearGradient>'
+    +'<linearGradient id="'+id+'s" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="'+s[0]+'"/><stop offset="50%" stop-color="'+s[1]+'"/><stop offset="100%" stop-color="'+s[2]+'"/></linearGradient>'
+    +'</defs>'
+    +'<path d="M5 2h10v7c0 3.3-2.2 5.4-5 5.9C7.2 14.4 5 12.3 5 9V2z" fill="url(#'+id+'c)"/>'
+    +'<path d="M7 2.5h2v6c0 2-1 3.5-2 4.2V2.5z" fill="white" opacity="0.12"/>'
+    +'<path d="M5 4.5C3.3 4.5 2 5.5 2 7s1.3 2.5 3 2.5" fill="none" stroke="url(#'+id+'c)" stroke-width="1.6" stroke-linecap="round"/>'
+    +'<path d="M15 4.5c1.7 0 3 1 3 2.5s-1.3 2.5-3 2.5" fill="none" stroke="url(#'+id+'c)" stroke-width="1.6" stroke-linecap="round"/>'
+    +'<path d="M8.5 15l-1 2.5h5l-1-2.5z" fill="url(#'+id+'s)"/>'
+    +'<rect x="5.5" y="17.5" width="9" height="1.5" rx="0.6" fill="url(#'+id+'s)"/>'
+    +'<text x="10" y="8" text-anchor="middle" dominant-baseline="middle" fill="'+num[rank-1]+'" font-size="6" font-weight="900" font-family="Georgia,serif">'+rank+'</text>'
+    +'</svg>';
+}
+function _svgStar(w) {
+  w = w||14; var id='st'+(++_svgIdCtr);
+  return '<svg width="'+w+'" height="'+w+'" viewBox="1.9 1.5 16.2 15.5" xmlns="http://www.w3.org/2000/svg"><defs>'
+    +'<radialGradient id="'+id+'" cx="38%" cy="30%" r="68%"><stop offset="0%" stop-color="#fff8c0"/><stop offset="45%" stop-color="#f0c040"/><stop offset="100%" stop-color="#906010"/></radialGradient>'
+    +'</defs><path d="M10,2 L12.47,6.60 L17.61,7.53 L13.99,11.30 L14.70,16.47 L10,14.2 L5.30,16.47 L6.01,11.30 L2.39,7.53 L7.53,6.60 Z" fill="url(#'+id+')"/></svg>';
+}
+function _svgFlame(w) {
+  w = w||14; var id='fm'+(++_svgIdCtr);
+  return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><defs>'
+    +'<linearGradient id="'+id+'" x1="30%" y1="0%" x2="70%" y2="100%"><stop offset="0%" stop-color="#fff0a0"/><stop offset="35%" stop-color="#ff9020"/><stop offset="80%" stop-color="#cc3010"/><stop offset="100%" stop-color="#881010"/></linearGradient>'
+    +'</defs><path d="M10 1.5 C10 5 8 6.5 7 9 C6 11.5 7 14 8.5 15 C7 12.5 9 11 9 8.5 C10 10.5 10.5 12 10 14.5 C11.5 13 12 11 11.5 9 C13 10.5 13.5 12.5 12.5 15 C14.5 13.5 15 11 14 9 C13 7 11.5 6 12 3 C11 4.5 10.5 3 10 1.5Z" fill="url(#'+id+')"/>'
+    +'<path d="M10 8 C10 10 9 11 9 12.5 C10 11.5 11 11 10.5 9 C11 10 11 11 10.5 12.5 C12 11.5 12 9.5 11 8.5 C10.5 7 11 5.5 10 4 C10 6 9 7 10 8Z" fill="#fff8c0" opacity="0.7"/></svg>';
+}
+function _svgBall(w) {
+  w = w||14; var id='ba'+(++_svgIdCtr);
+  return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><defs>'
+    +'<radialGradient id="'+id+'" cx="35%" cy="30%" r="65%"><stop offset="0%" stop-color="#f0f4f8"/><stop offset="50%" stop-color="#c8d4de"/><stop offset="100%" stop-color="#7090a8"/></radialGradient>'
+    +'</defs><circle cx="10" cy="10" r="8.5" fill="url(#'+id+')"/>'
+    +'<path d="M5.5 3.5 C8 7 8 13 5.5 16.5" fill="none" stroke="#c04444" stroke-width="1.1" stroke-linecap="round"/>'
+    +'<path d="M14.5 3.5 C12 7 12 13 14.5 16.5" fill="none" stroke="#c04444" stroke-width="1.1" stroke-linecap="round"/>'
+    +'<path d="M5.9,6.1 L7.5,5.6 M6.5,8.0 L7.9,7.8 M6.7,10 L8.1,10 M6.5,12.0 L7.9,12.2 M6.0,13.9 L7.4,14.4" fill="none" stroke="#c04444" stroke-width="0.6" stroke-linecap="round"/>'
+    +'<path d="M14.1,6.1 L12.5,5.6 M13.5,8.0 L12.1,7.8 M13.3,10 L11.9,10 M13.5,12.0 L12.1,12.2 M14.0,13.9 L12.6,14.4" fill="none" stroke="#c04444" stroke-width="0.6" stroke-linecap="round"/></svg>';
+}
+
+// ─── Stat text color (same ramp as statTint but full-opacity for text) ────────
+function statTextColor(value, floor, mid, ceil) {
+  var clamped = Math.max(floor, Math.min(ceil, +value||0));
+  var RED=[220,70,70], YEL=[210,185,50], GRN=[50,175,80], rgb, t;
+  if (clamped<=mid) {
+    t=(mid===floor)?1:(clamped-floor)/(mid-floor);
+    rgb=[Math.round(RED[0]+(YEL[0]-RED[0])*t),Math.round(RED[1]+(YEL[1]-RED[1])*t),Math.round(RED[2]+(YEL[2]-RED[2])*t)];
+  } else {
+    t=(ceil===mid)?1:(clamped-mid)/(ceil-mid);
+    rgb=[Math.round(YEL[0]+(GRN[0]-YEL[0])*t),Math.round(YEL[1]+(GRN[1]-YEL[1])*t),Math.round(YEL[2]+(GRN[2]-YEL[2])*t)];
+  }
+  return 'rgb('+rgb[0]+','+rgb[1]+','+rgb[2]+')';
+}
+
 var _mvpRankLabels = ['','1st','2nd','3rd','4th','5th'];
-var _mvpIcons = ['','🥇','🥈','🥉'];
 function _mvpBadgeHtml(rank, cls) {
   if (rank > 3) return '';
   var title = 'MVP ' + (_mvpRankLabels[rank] || rank) + ' place';
-  return '<span class="'+(cls||'mvp-badge')+' mvp-r'+rank+'" title="'+title+'">'+_mvpIcons[rank]+'</span>';
+  return '<span class="'+(cls||'mvp-badge')+' mvp-r'+rank+'" title="'+title+'">'+_svgTrophy(rank)+'</span>';
 }
 
 function getAwardBadgesHtml(player, year) {
@@ -3063,13 +3117,13 @@ function getAwardBadgesHtml(player, year) {
     if (mvpRank) html += _mvpBadgeHtml(mvpRank, 'award-badge mvp-badge');
   }
   if (eraCfg.showROY && ad && ad.roys && ad.roys[player.id]) {
-    html += '<span class="award-badge award-roy" title="Rookie of the Year">🐣</span>';
+    html += '<span class="award-badge award-roy" title="Rookie of the Year">'+_svgFlame(14)+'</span>';
   }
   if (eraCfg.showASG && (ad && ad.allStars && ad.allStars[player.id] || NOSTALGIA_ALLSTARS[player.name+'|'+year])) {
-    html += '<span class="award-badge award-as" title="All-Star">⭐</span>';
+    html += '<span class="award-badge award-as" title="All-Star">'+_svgStar(14)+'</span>';
   }
   if (eraCfg.showSS && ad && ad.silverSluggers && ad.silverSluggers[player.id]) {
-    html += '<span class="award-badge award-ss" title="Silver Slugger">⚡</span>';
+    html += '<span class="award-badge award-ss" title="Silver Slugger">'+_svgBall(14)+'</span>';
   }
   return html;
 }
@@ -4106,9 +4160,9 @@ function showResults() {
       var bdg = '';
       if (slot.awards) {
         if (slot.awards.mvp) bdg += _mvpBadgeHtml(slot.awards.mvp,'fl-award-badge mvp-badge');
-        if (slot.awards.roy) bdg += '<span class="fl-award-badge">&#128293;</span>';
-        if (slot.awards.asg) bdg += '<span class="fl-award-badge">&#11088;</span>';
-        if (slot.awards.ss)  bdg += '<span class="fl-award-badge">&#9889;</span>';
+        if (slot.awards.roy) bdg += '<span class="fl-award-badge">'+_svgFlame(14)+'</span>';
+        if (slot.awards.asg) bdg += '<span class="fl-award-badge">'+_svgStar(14)+'</span>';
+        if (slot.awards.ss)  bdg += '<span class="fl-award-badge">'+_svgBall(14)+'</span>';
       }
       html += '<div class="lu-row">'
         +'<div class="lu-stripe" style="background:'+sc+'"></div>'
@@ -4126,35 +4180,31 @@ function showResults() {
     document.getElementById('dash-lineup').innerHTML = html+'</div>';
   })();
 
-  // ── Tab 2: Matrix (heat map) ─────────────────────────────────────────────
+  // ── Matrix (heat map) ────────────────────────────────────────────────────
   (function() {
+    var SR2 = getStatRanges(S.era||'modern', S.spin ? S.spin.year : 2024);
+    var obpMid = SC.FLOOR.obp+(SC.CEIL.obp-SC.FLOOR.obp)*0.42;
+    var slgMid = SC.FLOOR.slg+(SC.CEIL.slg-SC.FLOOR.slg)*0.42;
     var cols = [
-      {k:'avg', l:'AVG',floor:SC.FLOOR.avg,  ceil:SC.CEIL.avg,  fmt:fmtSlash},
-      {k:'obp', l:'OBP',floor:SC.FLOOR.obp,  ceil:SC.CEIL.obp,  fmt:fmtSlash},
-      {k:'slg', l:'SLG',floor:SC.FLOOR.slg,  ceil:SC.CEIL.slg,  fmt:fmtSlash},
-      {k:'hr',  l:'HR', floor:SC.FLOOR.hr/9, ceil:SC.CEIL.hr/9, fmt:function(v){return Math.round(v);}},
-      {k:'rbi', l:'RBI',floor:SC.FLOOR.rbi/9,ceil:SC.CEIL.rbi/9,fmt:function(v){return Math.round(v);}},
-      {k:'r',   l:'R',  floor:SC.FLOOR.runs/9,ceil:SC.CEIL.runs/9,fmt:function(v){return Math.round(v);}},
+      {k:'avg',l:'AVG',tint:function(v){return statTint(v,SR2.avg[0],SR2.avg[1],SR2.avg[2]);},fmt:fmtSlash},
+      {k:'obp',l:'OBP',tint:function(v){return statTint(v,SC.FLOOR.obp,obpMid,SC.CEIL.obp);},fmt:fmtSlash},
+      {k:'slg',l:'SLG',tint:function(v){return statTint(v,SC.FLOOR.slg,slgMid,SC.CEIL.slg);},fmt:fmtSlash},
+      {k:'r',  l:'R',  tint:function(v){return statTint(v,SR2.r[0],  SR2.r[1],  SR2.r[2]);},  fmt:function(v){return Math.round(v);}},
+      {k:'hr', l:'HR', tint:function(v){return statTint(v,SR2.hr[0], SR2.hr[1], SR2.hr[2]);}, fmt:function(v){return Math.round(v);}},
+      {k:'rbi',l:'RBI',tint:function(v){return statTint(v,SR2.rbi[0],SR2.rbi[1],SR2.rbi[2]);},fmt:function(v){return Math.round(v);}},
     ];
     var html = '<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-th-row"></th>';
     for (var c=0;c<cols.length;c++) html += '<th class="hm-th">'+cols[c].l+'</th>';
     html += '</tr></thead><tbody>';
     for (var i=0;i<9;i++) {
-      var slot = S.lineup[i]; if (!slot) continue;
-      var st = slot.player.stats;
-      var last = slot.player.name.split(' ').slice(-1)[0];
+      var slot=S.lineup[i]; if(!slot) continue;
+      var st=slot.player.stats;
+      var last=slot.player.name.split(' ').slice(-1)[0];
       html += '<tr><td class="hm-th-row"><span class="hm-pos">'+POS[i]+'</span> '+esc(last)+'</td>';
       for (var c=0;c<cols.length;c++) {
-        var col = cols[c];
-        var val = col.k==='r' ? (st.runs||0) : (st[col.k]||0);
-        var n = _normStat(val,col.floor,col.ceil);
-        var bg,fg;
-        if      (n>=0.75){bg='rgba(201,164,74,0.38)';fg='#f5e898';}
-        else if (n>=0.55){bg='rgba(122,186,255,0.25)';fg='#a8d8ff';}
-        else if (n>=0.35){bg='rgba(255,255,255,0.05)';fg='var(--cream-dim)';}
-        else if (n>=0.15){bg='rgba(224,144,80,0.22)'; fg='#e8a060';}
-        else             {bg='rgba(192,112,112,0.28)';fg='#d88888';}
-        html += '<td class="hm-cell-wrap"><div class="hm-cell" style="background:'+bg+';color:'+fg+'">'+col.fmt(val)+'</div></td>';
+        var col=cols[c];
+        var val=col.k==='r'?(st.runs||0):(st[col.k]||0);
+        html += '<td class="hm-cell-wrap"><div class="hm-cell" style="background:'+col.tint(val)+'">'+col.fmt(val)+'</div></td>';
       }
       html += '</tr>';
     }
@@ -4207,40 +4257,7 @@ function showResults() {
     document.getElementById('dash-plot').innerHTML = svg;
   })();
 
-  // ── Tab 4: Wins (contribution bars) ──────────────────────────────────────
-  (function() {
-    var players=[],totalScore=0;
-    for (var i=0;i<9;i++) {
-      var slot=S.lineup[i]; if(!slot) continue;
-      var st=slot.player.stats, score=_playerScore(st), ops=(st.obp||0)+(st.slg||0);
-      players.push({idx:i,name:slot.player.name,last:slot.player.name.split(' ').slice(-1)[0],score:score,ops:ops,col:_tierCol(ops)});
-      totalScore+=score;
-    }
-    var html='<div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:10px;margin-bottom:5px">Team Contribution</div>';
-    html+='<div class="wc-stack">';
-    for(var p=0;p<players.length;p++){
-      var pl=players[p],w=totalScore>0?(pl.score/totalScore*100).toFixed(1):+(100/players.length).toFixed(1);
-      html+='<div class="wc-seg" style="width:'+w+'%;background:'+pl.col+'" title="'+esc(pl.name)+' · '+w+'%">'
-        +(parseFloat(w)>=9?'<span style="font-size:8px;font-weight:800;color:rgba(0,0,0,0.65);padding:0 2px;overflow:hidden;white-space:nowrap">'+esc(pl.last)+'</span>':'')
-        +'</div>';
-    }
-    html+='</div><div class="wc-rows">';
-    var sorted=players.slice().sort(function(a,b){return b.score-a.score;});
-    for(var p=0;p<sorted.length;p++){
-      var pl=sorted[p],w=totalScore>0?(pl.score/totalScore*100).toFixed(1):+(100/players.length).toFixed(1);
-      html+='<div class="wc-row">'
-        +'<div class="wc-pos">'+POS[pl.idx]+'</div>'
-        +'<div class="wc-name" title="'+esc(pl.name)+'">'+esc(pl.last)+'</div>'
-        +'<div class="wc-bar-wrap"><div class="wc-bar-fill" style="width:'+w+'%;background:'+pl.col+'"></div></div>'
-        +'<div class="wc-pct">'+w+'%</div>'
-        +'<div class="wc-ops">'+fmtSlash(pl.ops)+'</div>'
-      +'</div>';
-    }
-    html+='</div>';
-    document.getElementById('dash-wins').innerHTML = html;
-  })();
-
-  // ── Tab 5: Leaders ────────────────────────────────────────────────────────
+  // ── Leaders ───────────────────────────────────────────────────────────────
   (function() {
     var cats=[
       {k:'hr',  l:'HR', f:function(v){return Math.round(v);}},
@@ -4254,7 +4271,7 @@ function showResults() {
     for(var i=0;i<9;i++){
       var slot=S.lineup[i]; if(!slot) continue;
       var st=slot.player.stats;
-      players.push({name:slot.player.name,pos:POS[i],hr:st.hr,rbi:st.rbi,runs:st.runs||0,avg:st.avg,ops:(st.obp||0)+(st.slg||0),sb:st.sb});
+      players.push({name:slot.player.name,pos:POS[i],year:slot.year,hr:st.hr,rbi:st.rbi,runs:st.runs||0,avg:st.avg,ops:(st.obp||0)+(st.slg||0),sb:st.sb});
     }
     var html='<div class="ld-grid">';
     for(var c=0;c<cats.length;c++){
@@ -4262,7 +4279,8 @@ function showResults() {
       html+='<div class="ld-col"><div class="ld-head">'+cat.l+'</div>';
       for(var p=0;p<sorted.length;p++){
         var medal=p===0?'ld-gold':p===1?'ld-silver':p===2?'ld-bronze':'';
-        html+='<div class="ld-row '+medal+'"><span class="ld-rank">'+(p+1)+'</span><span class="ld-name" title="'+esc(sorted[p].name)+'">'+esc(sorted[p].name.split(' ').pop())+'</span><span class="ld-val">'+cat.f(sorted[p][cat.k])+'</span></div>';
+        var yr = sorted[p].year ? ' <span style="font-size:8px;color:var(--muted);font-weight:400">\''+String(sorted[p].year).slice(2)+'</span>' : '';
+        html+='<div class="ld-row '+medal+'"><span class="ld-rank">'+(p+1)+'</span><span class="ld-name" title="'+esc(sorted[p].name)+'">'+esc(sorted[p].name.split(' ').pop())+yr+'</span><span class="ld-val">'+cat.f(sorted[p][cat.k])+'</span></div>';
       }
       html+='</div>';
     }
@@ -4273,26 +4291,33 @@ function showResults() {
   var maxGames = 162 * 9;
   var gamesPct = Math.round(a.games / maxGames * 100);
 
-  document.getElementById('sb-total').innerHTML = 'Overall Strength: <strong>'+Math.round(res.strength*100)+'%</strong>'
-    + ' <span style="margin:0 6px;opacity:.4">·</span> '
-    + gamesPct+'% of games played';
+  document.getElementById('sb-total').innerHTML = gamesPct + '% of possible games played';
 
-  var lbl = '<div style="flex-basis:100%;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding-top:6px">';
-  document.getElementById('agg-row').innerHTML =
-    '<div class="agg-chip"><div class="agg-chip-val">'+fmtSlash(a.avg)+'</div><div class="agg-chip-lbl">AVG</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+fmtSlash(a.obp)+'</div><div class="agg-chip-lbl">OBP</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+fmtSlash(a.slg)+'</div><div class="agg-chip-lbl">SLG</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+fmtSlash(a.obp+a.slg)+'</div><div class="agg-chip-lbl">OPS</div></div>'
-    +lbl+'Totals</div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+Math.round(a.hr)+'</div><div class="agg-chip-lbl">HR</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+Math.round(a.rbi)+'</div><div class="agg-chip-lbl">RBI</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+Math.round(a.runs)+'</div><div class="agg-chip-lbl">R</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+Math.round(a.sb)+'</div><div class="agg-chip-lbl">SB</div></div>'
-    +lbl+'Per Player</div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+(a.hr/9).toFixed(1)+'</div><div class="agg-chip-lbl">HR</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+(a.rbi/9).toFixed(1)+'</div><div class="agg-chip-lbl">RBI</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+(a.runs/9).toFixed(1)+'</div><div class="agg-chip-lbl">R</div></div>'
-    +'<div class="agg-chip"><div class="agg-chip-val">'+(a.sb/9).toFixed(1)+'</div><div class="agg-chip-lbl">SB</div></div>';
+  (function(){
+    var SR3 = getStatRanges(S.era||'modern', S.spin ? S.spin.year : 2024);
+    var obpMid2 = SC.FLOOR.obp+(SC.CEIL.obp-SC.FLOOR.obp)*0.42;
+    var slgMid2 = SC.FLOOR.slg+(SC.CEIL.slg-SC.FLOOR.slg)*0.42;
+    function chip(val, lbl, col) {
+      return '<div class="agg-chip"><div class="agg-chip-val" style="color:'+col+'">'+val+'</div><div class="agg-chip-lbl">'+lbl+'</div></div>';
+    }
+    document.getElementById('agg-row').innerHTML =
+      '<div class="agg-section-lbl">Slash Line</div><div class="agg-chips">'
+      +chip(fmtSlash(a.avg),       'AVG', statTextColor(a.avg,      SR3.avg[0],    SR3.avg[1],    SR3.avg[2]))
+      +chip(fmtSlash(a.obp),       'OBP', statTextColor(a.obp,      SC.FLOOR.obp,  obpMid2,       SC.CEIL.obp))
+      +chip(fmtSlash(a.slg),       'SLG', statTextColor(a.slg,      SC.FLOOR.slg,  slgMid2,       SC.CEIL.slg))
+      +chip(fmtSlash(a.obp+a.slg), 'OPS', statTextColor(a.obp+a.slg,SR3.ops[0],    SR3.ops[1],    SR3.ops[2]))
+      +'</div><div class="agg-section-lbl">Totals</div><div class="agg-chips">'
+      +chip(Math.round(a.hr),   'HR',  statTextColor(a.hr,   SR3.hr[0]*9,  SR3.hr[1]*9,  SR3.hr[2]*9))
+      +chip(Math.round(a.rbi),  'RBI', statTextColor(a.rbi,  SR3.rbi[0]*9, SR3.rbi[1]*9, SR3.rbi[2]*9))
+      +chip(Math.round(a.runs), 'R',   statTextColor(a.runs, SR3.r[0]*9,   SR3.r[1]*9,   SR3.r[2]*9))
+      +chip(Math.round(a.sb),   'SB',  statTextColor(a.sb,   SR3.sb[0]*9,  SR3.sb[1]*9,  SR3.sb[2]*9))
+      +'</div><div class="agg-section-lbl">Per Player</div><div class="agg-chips">'
+      +chip((a.hr/9).toFixed(1),   'HR',  statTextColor(a.hr/9,   SR3.hr[0],  SR3.hr[1],  SR3.hr[2]))
+      +chip((a.rbi/9).toFixed(1),  'RBI', statTextColor(a.rbi/9,  SR3.rbi[0], SR3.rbi[1], SR3.rbi[2]))
+      +chip((a.runs/9).toFixed(1), 'R',   statTextColor(a.runs/9, SR3.r[0],   SR3.r[1],   SR3.r[2]))
+      +chip((a.sb/9).toFixed(1),   'SB',  statTextColor(a.sb/9,   SR3.sb[0],  SR3.sb[1],  SR3.sb[2]))
+      +'</div>';
+  })();
 
 
   // Provenance chips — unique team+year combos sorted by year
@@ -4307,32 +4332,11 @@ function showResults() {
   originArr.sort(function(a, b){ return a.year - b.year; });
   document.getElementById('fl-origins').innerHTML = originArr.map(function(o){
     return '<span class="fl-origin-chip">'
-      + o.year + ' ' + esc(o.teamName)
+      + o.year + ' ' + esc(o.team)
       + (o.count > 1 ? ' ×' + o.count : '')
       + '</span>';
   }).join('');
 
-
-  var flHtml = '';
-  for (var r=0;r<9;r++) {
-    var slot = S.lineup[r];
-    if (!slot) continue;
-    var sst = slot.player.stats;
-    var badgeStr = '';
-    if (slot.awards) {
-      if (slot.awards.mvp) badgeStr += _mvpBadgeHtml(slot.awards.mvp, 'fl-award-badge mvp-badge');
-      if (slot.awards.roy) badgeStr += '<span class="fl-award-badge">&#128035;</span>';
-      if (slot.awards.asg) badgeStr += '<span class="fl-award-badge">&#11088;</span>';
-      if (slot.awards.ss)  badgeStr += '<span class="fl-award-badge">&#9889;</span>';
-    }
-    flHtml += '<div class="fl-row">'
-      +'<div class="fl-pos">'+POS[r]+'</div>'
-      +'<div style="flex:1"><div class="fl-name">'+esc(slot.player.name)+badgeStr+'</div><div class="fl-ctx">'+slot.year+' · '+esc(slot.teamName)+'</div></div>'
-      +'<div class="fl-stats"><div class="fl-slash">'+fmtSlash(sst.avg)+'/'+fmtSlash(sst.obp)+'/'+fmtSlash(sst.slg)+'</div>'
-      +'<div class="fl-cnt">'+sst.hr+'HR · '+sst.rbi+'RBI · '+sst.sb+'SB</div></div>'
-      +'</div>';
-  }
-  document.getElementById('fl-rows').innerHTML = flHtml;
 
 }
 
