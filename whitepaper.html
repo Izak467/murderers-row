@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Murderers' Row — Scoring Algorithm Whitepaper</title>
+<style>
+  /* ── Screen + Print base ─────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.65;
+    color: #1a1a1a;
+    background: #f5f3ef;
+  }
+
+  /* ── Page container ──────────────────────────────────── */
+  .page {
+    width: 8.5in;
+    min-height: 11in;
+    margin: 0.5in auto;
+    background: #fff;
+    padding: 1in 1.1in 1in 1.1in;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.12);
+  }
+
+  /* ── Cover ───────────────────────────────────────────── */
+  .cover {
+    text-align: center;
+    padding: 0.6in 0 0.5in;
+    border-bottom: 2px solid #b8a96a;
+    margin-bottom: 0.45in;
+  }
+  .cover-logo {
+    font-family: 'Georgia', serif;
+    font-size: 11pt;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #8a7340;
+    margin-bottom: 0.18in;
+  }
+  .cover h1 {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    margin-bottom: 0.12in;
+  }
+  .cover-sub {
+    font-size: 12pt;
+    color: #555;
+    font-style: italic;
+    margin-bottom: 0.22in;
+  }
+  .cover-meta {
+    font-size: 9.5pt;
+    color: #888;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.05em;
+  }
+  .cover-rule {
+    width: 2.5in;
+    height: 1px;
+    background: #b8a96a;
+    margin: 0.18in auto;
+  }
+
+  /* ── TOC ─────────────────────────────────────────────── */
+  .toc {
+    background: #faf9f6;
+    border: 1px solid #e0d9ca;
+    border-radius: 4px;
+    padding: 0.22in 0.28in;
+    margin-bottom: 0.45in;
+  }
+  .toc-title {
+    font-size: 10pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #8a7340;
+    margin-bottom: 0.10in;
+  }
+  .toc ol {
+    padding-left: 1.4em;
+  }
+  .toc li {
+    font-size: 10pt;
+    line-height: 1.8;
+    color: #333;
+  }
+  .toc li.toc-sub {
+    padding-left: 1.2em;
+    font-size: 9.5pt;
+    color: #555;
+  }
+
+  /* ── Sections ────────────────────────────────────────── */
+  h2 {
+    font-size: 15pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-top: 0.38in;
+    margin-bottom: 0.10in;
+    padding-bottom: 0.06in;
+    border-bottom: 1px solid #d4c99a;
+    letter-spacing: -0.01em;
+  }
+  h2 .sec-num {
+    color: #b8a96a;
+    margin-right: 0.15em;
+  }
+
+  h3 {
+    font-size: 11.5pt;
+    font-weight: 700;
+    color: #2a2a2a;
+    margin-top: 0.22in;
+    margin-bottom: 0.07in;
+  }
+  h3 .sec-num {
+    color: #b8a96a;
+    margin-right: 0.12em;
+  }
+
+  p {
+    margin-bottom: 0.10in;
+    text-align: justify;
+  }
+
+  /* ── Blockquote (citations) ──────────────────────────── */
+  blockquote {
+    margin: 0.12in 0 0.12in 0.25in;
+    padding: 0.08in 0.15in 0.08in 0.15in;
+    border-left: 3px solid #b8a96a;
+    background: #faf9f6;
+    font-size: 9.5pt;
+    color: #555;
+    font-style: italic;
+  }
+  blockquote strong { font-style: normal; color: #333; }
+
+  /* ── Code / formula ──────────────────────────────────── */
+  pre {
+    background: #f4f2ec;
+    border: 1px solid #e0d9ca;
+    border-radius: 3px;
+    padding: 0.10in 0.14in;
+    margin: 0.10in 0 0.12in;
+    font-family: 'Courier New', monospace;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  code {
+    font-family: 'Courier New', monospace;
+    font-size: 9.5pt;
+    background: #f0eeea;
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  /* ── Tables ──────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.12in 0 0.16in;
+    font-size: 9.5pt;
+  }
+  thead tr {
+    background: #2a2015;
+    color: #e8dfc0;
+  }
+  thead th {
+    padding: 0.06in 0.10in;
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    font-size: 9pt;
+    text-transform: uppercase;
+  }
+  tbody tr:nth-child(even) { background: #faf9f6; }
+  tbody tr:nth-child(odd)  { background: #fff; }
+  tbody td {
+    padding: 0.045in 0.10in;
+    border-bottom: 1px solid #e8e0d0;
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: 2px solid #b8a96a; }
+
+  /* ── Lists ───────────────────────────────────────────── */
+  ul, ol {
+    padding-left: 1.4em;
+    margin-bottom: 0.10in;
+  }
+  li {
+    margin-bottom: 0.04in;
+  }
+
+  /* ── Footnote-style section divider ──────────────────── */
+  .section-rule {
+    border: none;
+    border-top: 1px solid #e0d9ca;
+    margin: 0.30in 0 0.18in;
+  }
+
+  /* ── Footer ──────────────────────────────────────────── */
+  .doc-footer {
+    margin-top: 0.40in;
+    padding-top: 0.12in;
+    border-top: 2px solid #b8a96a;
+    font-size: 8.5pt;
+    color: #999;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Print ───────────────────────────────────────────── */
+  @media print {
+    body { background: #fff; font-size: 10.5pt; }
+    .page {
+      width: 100%;
+      margin: 0;
+      padding: 0.75in 0.9in;
+      box-shadow: none;
+      min-height: unset;
+    }
+    h2 { page-break-after: avoid; }
+    h3 { page-break-after: avoid; }
+    pre, blockquote, table { page-break-inside: avoid; }
+    .cover { page-break-after: always; }
+    .toc   { page-break-after: always; }
+
+    @page {
+      size: letter;
+      margin: 0.75in 0.9in;
+    }
+    @page :first { margin-top: 0.5in; }
+
+    /* running footer */
+    @bottom-center {
+      content: "murderers-row.net  ·  Scoring Algorithm Whitepaper  ·  " counter(page);
+      font-family: 'Courier New', monospace;
+      font-size: 8pt;
+      color: #aaa;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── COVER ── -->
+  <div class="cover">
+    <div class="cover-logo">murderers-row.net</div>
+    <h1>Scoring Algorithm<br>Whitepaper</h1>
+    <div class="cover-sub">Technical &amp; Design Reference — Version 2.0</div>
+    <div class="cover-rule"></div>
+    <div class="cover-meta">June&nbsp;2026&nbsp;&nbsp;·&nbsp;&nbsp;Confidential&nbsp;&nbsp;·&nbsp;&nbsp;All seasons 1901–2026</div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li>Purpose</li>
+      <li>The Hidden Rate Stat: wOBA
+        <ol>
+          <li class="toc-sub">Why Not OPS?</li>
+          <li class="toc-sub">Weighted On-Base Average (wOBA)</li>
+          <li class="toc-sub">Per-Season Linear Weights</li>
+        </ol>
+      </li>
+      <li>Durability Adjustment
+        <ol>
+          <li class="toc-sub">The Problem with Raw Rate Stats</li>
+          <li class="toc-sub">Counting Stats Are Not Adjusted</li>
+        </ol>
+      </li>
+      <li>Lineup Aggregation</li>
+      <li>Era-Specific Scoring
+        <ol>
+          <li class="toc-sub">Normalization</li>
+          <li class="toc-sub">Weights</li>
+          <li class="toc-sub">Nostalgia Era SB Ceiling</li>
+        </ol>
+      </li>
+      <li>The Win Curve
+        <ol>
+          <li class="toc-sub">Formula</li>
+          <li class="toc-sub">The Floor: 42</li>
+          <li class="toc-sub">Why a Power Curve?</li>
+        </ol>
+      </li>
+      <li>Hidden Depth: wOBA as a Secret Layer
+        <ol>
+          <li class="toc-sub">The Scatter Plot</li>
+          <li class="toc-sub">HR Double-Counting</li>
+        </ol>
+      </li>
+      <li>Data Sources</li>
+      <li>What Is Not in the Formula</li>
+    </ol>
+  </div>
+
+  <!-- ── §1 PURPOSE ── -->
+  <h2><span class="sec-num">1.</span> Purpose</h2>
+  <p>
+    Murderers' Row is a baseball lineup-building game in which players construct a nine-man batting order
+    from players randomly drawn from a single MLB team and season. The scoring engine converts that lineup
+    into a projected win-loss record — a single number that rewards deep baseball knowledge while remaining
+    legible to casual fans.
+  </p>
+  <p>
+    This document describes every mathematical decision behind that number: why each stat was chosen,
+    how it is weighted, and what design tradeoffs were made between accuracy, accessibility, and gameplay.
+  </p>
+
+  <!-- ── §2 WOBA ── -->
+  <h2><span class="sec-num">2.</span> The Hidden Rate Stat: wOBA</h2>
+
+  <h3><span class="sec-num">2.1</span> Why Not OPS?</h3>
+  <p>
+    The game displays traditional statistics — AVG, OBP, SLG, OPS — because those are the numbers fans
+    recognize and can reason about at a glance. But OPS has a well-documented flaw: it adds on-base
+    percentage and slugging percentage as if they are denominated in the same unit, which they are not.
+    A point of OBP is worth approximately <strong>1.7×</strong> a point of SLG in run production terms
+    <em>(Tango, Lichtman &amp; Dolphin, The Book, 2007)</em>. OPS systematically undervalues walks and
+    contact hitters relative to sluggers.
+  </p>
+
+  <h3><span class="sec-num">2.2</span> Weighted On-Base Average (wOBA)</h3>
+  <p>
+    The underlying scoring engine uses <strong>wOBA</strong> (Weighted On-Base Average), developed by
+    Tom Tango and popularized through FanGraphs. wOBA assigns a run-value coefficient to each offensive
+    event — walk, hit-by-pitch, single, double, triple, home run — based on how many runs that event
+    produces on average relative to an out:
+  </p>
+  <pre>wOBA = (c.bb × BB + c.hbp × HBP + c.1b × 1B + c.2b × 2B + c.3b × 3B + c.hr × HR)
+       ────────────────────────────────────────────────────────────────────────────
+                             AB + BB + HBP + SF</pre>
+  <p>
+    The denominator is plate appearances (excluding sacrifice hits, which are considered outs-on-purpose).
+    The resulting value is scaled to match league OBP, giving wOBA a familiar range (~.270–.420 for
+    MLB regulars).
+  </p>
+
+  <h3><span class="sec-num">2.3</span> Per-Season Linear Weights</h3>
+  <p>
+    Crucially, the coefficients are <em>not fixed</em>. FanGraphs publishes a "Guts!" table of linear
+    weights recalculated each season from actual run expectancy data going back to 1901. The game loads
+    these per-season coefficients from <code>woba_weights.js</code> (126 seasons, 1901–2026) and uses the
+    weights matching each player's actual season year.
+  </p>
+  <p>
+    This matters because run environments change dramatically across eras. In 2001 (peak steroid era), runs
+    were plentiful and therefore <em>cheap</em> — each home run was worth less in run value than it would
+    be in a pitcher's era when runs are scarce. The per-season wHR coefficient reflects this: steroid-era
+    wHR (~1.990) is actually <em>lower</em> than nostalgia-era wHR (~2.143), which is counterintuitive
+    but mathematically correct.
+  </p>
+  <blockquote>
+    <strong>Source:</strong> FanGraphs Guts! table — <code>fangraphs.com/guts.aspx?type=cn</code>.
+    Coefficients derived from linear weights methodology described in Tango, Lichtman &amp; Dolphin,
+    <em>The Book: Playing the Percentages in Baseball</em> (2007), and Pete Palmer's original linear
+    weights work, <em>The Hidden Game of Baseball</em> (1984).
+  </blockquote>
+
+  <!-- ── §3 DURABILITY ── -->
+  <h2><span class="sec-num">3.</span> Durability Adjustment</h2>
+
+  <h3><span class="sec-num">3.1</span> The Problem with Raw Rate Stats</h3>
+  <p>
+    A player who posts a .420 wOBA in 40 games is likely a different proposition than one who posts .420
+    in 162 games. Small samples regress toward league average; the 40-game player's true talent level is
+    far less certain. The game applies a <strong>durability adjustment</strong> to rate stats to capture this:
+  </p>
+  <pre>adjustedWOBA = lgWoba + (playerWoba − lgWoba) × √(games / 162)</pre>
+  <p>
+    The square-root curve was chosen deliberately over a linear adjustment. It gives substantial credit
+    for half-seasons (√(81/162) ≈ 0.71, meaning 71% of the excess over average is preserved), while
+    still discounting injury-shortened seasons. A full 162-game season receives full weight (√1 = 1.0).
+  </p>
+  <p>
+    <code>lgWoba</code> is the league-average wOBA for that specific season, sourced directly from the
+    FanGraphs Guts! table. This ensures the baseline moves with the run environment — a .320 wOBA in
+    1968 (a year of historically low offense) represents a different quality of performance than .320
+    in 2000.
+  </p>
+
+  <h3><span class="sec-num">3.2</span> Counting Stats Are Not Adjusted</h3>
+  <p>
+    Home runs, RBI, runs scored, and stolen bases are <strong>summed directly</strong> without any
+    durability penalty. A player who hit 40 HR in 100 games legitimately hit 40 HR — those happened.
+    The counting stats measure volume of production, not rate, so shrinking them by games played would
+    be incorrect and would penalize legitimate productivity. Only rate stats (wOBA) are subject to the
+    durability regression.
+  </p>
+
+  <!-- ── §4 AGGREGATION ── -->
+  <h2><span class="sec-num">4.</span> Lineup Aggregation</h2>
+  <p>The nine-player lineup is aggregated as follows:</p>
+  <ul>
+    <li><strong>wOBA:</strong> Durability-adjusted values are averaged across all nine slots. League-average
+    wOBA is used as the baseline for each player's adjustment, ensuring the team wOBA is expressed relative
+    to the run environment of each player's own season.</li>
+    <li><strong>HR, RBI, Runs, SB:</strong> Summed directly — no averaging, no durability adjustment.</li>
+    <li><strong>AVG, OBP, SLG:</strong> Averaged across nine players. These appear as slash-line chips in
+    the results dashboard but do not drive the win calculation.</li>
+  </ul>
+
+  <!-- ── §5 ERA SCORING ── -->
+  <h2><span class="sec-num">5.</span> Era-Specific Scoring</h2>
+  <p>
+    The aggregated lineup statistics are normalized against era-specific floors and ceilings, then combined
+    via a weighted composite score.
+  </p>
+
+  <h3><span class="sec-num">5.1</span> Normalization</h3>
+  <p>Each component is normalized to [0, 1]:</p>
+  <pre>norm(x) = clamp((x − FLOOR) / (CEIL − FLOOR), 0, 1)</pre>
+  <p>
+    The FLOOR represents the lower bound of what a genuinely bad but plausible nine-man lineup produces;
+    the CEIL represents an elite historical lineup. Floors for RBI and Runs are set to approximately
+    9 players × 50 RBI (era-adjusted), not zero, because even a bad MLB lineup accumulates substantial
+    counting stats over 162 games.
+  </p>
+
+  <h3><span class="sec-num">5.2</span> Weights</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Modern</th>
+        <th>Steroid</th>
+        <th>Nostalgia</th>
+        <th>Rationale</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>wOBA</td><td>52%</td><td>52%</td><td>52%</td>
+        <td>Best single measure of offensive quality; era-adjusted by construction</td>
+      </tr>
+      <tr>
+        <td>HR</td><td>16%</td><td>20%</td><td>14%</td>
+        <td>More weight in HR-inflated steroid era; less in contact-and-speed nostalgia era</td>
+      </tr>
+      <tr>
+        <td>RBI</td><td>12%</td><td>12%</td><td>12%</td>
+        <td>Consistent proxy for run production across eras</td>
+      </tr>
+      <tr>
+        <td>Runs</td><td>10%</td><td>10%</td><td>10%</td>
+        <td>Correlated with RBI but measures run scoring rather than run driving</td>
+      </tr>
+      <tr>
+        <td>SB</td><td>10%</td><td>6%</td><td>12%</td>
+        <td>Stolen bases peaked in value pre-steroid era; negligible in 1995–2004</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    <em>Note: the Runs weight was reduced from 12% to 10% (with the 2% redistributed to wOBA) to reduce
+    the implicit double-weighting of run production, since RBI and Runs are highly correlated and each
+    measures similar run-context outcomes.</em>
+  </p>
+
+  <h3><span class="sec-num">5.3</span> Nostalgia Era SB Ceiling</h3>
+  <p>
+    The stolen base ceiling for the nostalgia era was set at <strong>240</strong>. An earlier value of
+    340 was calibrated to extreme outlier teams like the 1985 St. Louis Cardinals (314 SB), but most
+    randomly spun nostalgia teams produce 80–160 SB. A ceiling calibrated only to outliers caused
+    non-speed teams to score near-zero on a 12% component through no strategic fault of their own.
+    At 240, a power team with 80 SB still scores ~33% of the SB component, while a genuine speed
+    team (200+ SB) approaches the ceiling.
+  </p>
+
+  <!-- ── §6 WIN CURVE ── -->
+  <h2><span class="sec-num">6.</span> The Win Curve</h2>
+
+  <h3><span class="sec-num">6.1</span> Formula</h3>
+  <p>The composite strength score (0 to 1) is converted to projected wins via a <strong>convex power curve</strong>:</p>
+  <pre>wins = clamp( round( 42 + 120 × strength<sup>2.4</sup> ),  162 )</pre>
+
+  <h3><span class="sec-num">6.2</span> The Floor: 42</h3>
+  <p>
+    The minimum possible win total is <strong>42</strong>, chosen as a deliberate Easter egg honoring
+    Jackie Robinson's retired number. In practice, no reasonable lineup scores strength = 0.0, so real
+    games rarely produce fewer than ~55 wins.
+  </p>
+
+  <h3><span class="sec-num">6.3</span> Why a Power Curve?</h3>
+  <p>
+    A linear function would make marginal improvements feel uniformly rewarding: going from a terrible
+    lineup to a mediocre one would feel identical to going from a good lineup to a great one. The power
+    curve (exponent 2.4) creates a steeper reward gradient:
+  </p>
+  <ul>
+    <li><strong>Low end is compressed:</strong> Mediocre lineups (strength ~0.50) project to ~65 wins.
+    You cannot reach a .500 record without intentional, informed construction.</li>
+    <li><strong>High end is sparse:</strong> The jump from 90 wins to 100 wins requires meaningful
+    strength improvement (Δs ≈ 0.06), making elite scores feel genuinely earned.</li>
+    <li><strong>Extreme scores are rare:</strong> A 115+ win projection requires strength ≥ 0.83 —
+    achievable only with near-perfect lineup construction.</li>
+  </ul>
+  <p>The result tier thresholds, calibrated to this curve:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Wins</th><th>Label</th><th>Required Strength</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>162</td><td>Perfect Season</td><td>1.00</td></tr>
+      <tr><td>130+</td><td>Historic</td><td>~0.88</td></tr>
+      <tr><td>115+</td><td>Transcendent</td><td>~0.83</td></tr>
+      <tr><td>100+</td><td>Dominant</td><td>~0.76</td></tr>
+      <tr><td>87+</td><td>Elite</td><td>~0.66</td></tr>
+      <tr><td>74+</td><td>Solid Contender</td><td>~0.58</td></tr>
+      <tr><td>63+</td><td>Decent</td><td>~0.50</td></tr>
+      <tr><td>&lt;63</td><td>Lineup Has Gaps</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── §7 HIDDEN DEPTH ── -->
+  <h2><span class="sec-num">7.</span> Hidden Depth: wOBA as a Secret Layer</h2>
+  <p>
+    A deliberate design choice keeps wOBA invisible to the player. The game displays AVG, OBP, SLG, and
+    OPS everywhere in the UI. wOBA is never labeled or surfaced directly.
+  </p>
+
+  <h3><span class="sec-num">7.1</span> The Scatter Plot</h3>
+  <p>
+    The "Power vs. Patience" scatter plot in the results dashboard charts OBP (x-axis) against SLG
+    (y-axis), with bubble size proportional to HR. The <strong>color</strong> of each bubble is mapped
+    to OPS (OBP + SLG) — literally the sum of the two visible axes — so the color gradient tracks each
+    player's position in the chart space coherently. A player in the upper-right corner (high OBP and
+    high SLG) will naturally appear with the warmest color; a player in the lower-left will appear cool.
+    This makes the visualization self-consistent: no external knowledge is required to interpret the color.
+  </p>
+
+  <h3><span class="sec-num">7.2</span> HR Double-Counting</h3>
+  <p>Home runs contribute to the score through two separate channels simultaneously:</p>
+  <ol>
+    <li><strong>Inside wOBA:</strong> Each HR earns <code>c.hr × 1</code> in the wOBA numerator, where
+    <code>c.hr</code> is the era- and season-adjusted run value of a home run (~1.99–2.14). This captures
+    the <em>quality-adjusted</em> value.</li>
+    <li><strong>Explicit HR component:</strong> The raw HR total is summed across the lineup and
+    normalized against the era FLOOR/CEIL, weighted at 14–20% depending on era. This rewards
+    <em>volume</em> of home run production regardless of era context.</li>
+  </ol>
+  <p>
+    This is intentional and largely self-correcting. The two channels measure different things: wOBA
+    captures how much each HR was <em>worth</em> in its run environment (a HR in 2001 is worth less
+    than one in 1968 because runs were cheap), while the explicit HR component rewards <em>volume</em>.
+    A player with 60 HR gains from both channels; a player with 0 HR gains from neither. Crucially,
+    the wHR coefficient is <em>higher</em> when runs are scarce — so the wOBA channel partially dampens
+    the value of individual HRs in high-offense eras, acting as a natural counterweight to the raw
+    volume component rather than simply double-counting it.
+  </p>
+
+  <!-- ── §8 DATA SOURCES ── -->
+  <h2><span class="sec-num">8.</span> Data Sources</h2>
+  <table>
+    <thead>
+      <tr><th>Data</th><th>Source</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Per-season wOBA linear weights (1901–2026)</td>
+        <td>FanGraphs Guts! table — <code>fangraphs.com/guts.aspx?type=cn</code></td>
+      </tr>
+      <tr>
+        <td>League-average wOBA per season (<code>lgWoba</code>)</td>
+        <td>FanGraphs Guts! table</td>
+      </tr>
+      <tr>
+        <td>Player batting statistics (1969–present)</td>
+        <td>MLB Stats API — <code>statsapi.mlb.com/api/v1</code></td>
+      </tr>
+      <tr>
+        <td>Player batting statistics (1901–1968)</td>
+        <td>Lahman Database 2025 — <code>seanlahman.com</code></td>
+      </tr>
+      <tr>
+        <td>Linear weights theory</td>
+        <td>Tango, Lichtman &amp; Dolphin — <em>The Book: Playing the Percentages in Baseball</em> (2007)</td>
+      </tr>
+      <tr>
+        <td>Original linear weights methodology</td>
+        <td>Palmer &amp; Thorn — <em>The Hidden Game of Baseball</em> (1984)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── §9 EXCLUSIONS ── -->
+  <h2><span class="sec-num">9.</span> What Is Not in the Formula</h2>
+  <p>
+    <strong>Defensive value</strong> is excluded entirely. Wins Above Replacement (WAR) and Defensive
+    Runs Saved (DRS) would incorporate fielding, but the game is explicitly about <em>offensive</em>
+    lineup construction — the spirit of "Murderers' Row" (the 1927 Yankees' fearsome batting order)
+    is pure hitting. Pitching and defense are assumed equal across all lineups.
+  </p>
+  <p>
+    <strong>Park factors</strong> are not applied. Adjusting for Coors Field or Fenway Park would add
+    accuracy but at the cost of obscuring the signal: users would need to track park-adjusted stats
+    rather than box-score stats, breaking the accessibility of the display layer.
+  </p>
+  <p>
+    <strong>Baserunning value beyond SB</strong> (e.g., extra bases taken, GDP rate) is not modeled.
+    These events are either unavailable in the MLB Stats API at the aggregation level used or too
+    granular for meaningful era comparison across 1901–2026.
+  </p>
+
+  <hr class="section-rule">
+  <div class="doc-footer">
+    murderers-row.net &nbsp;·&nbsp; Scoring Algorithm Whitepaper &nbsp;·&nbsp; June 2026
+  </div>
+
+</div>
+</body>
+</html>
