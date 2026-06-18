@@ -3852,20 +3852,6 @@ function fetchAwardsForYear(year, era) {
     ['ALROY', 'roys'], ['NLROY', 'roys'],
     ['ALMVP', 'mvpWinners'], ['NLMVP', 'mvpWinners'],
   ];
-  if (eraCfg.showASG) {
-    // ALAS/NLAS are not valid award IDs; All-Star selections live on game rosters
-    [159,160].forEach(function(asgId){
-      fetches.push(
-        fetch(API+'/roster/'+asgId+'?rosterType=allStarFull&season='+year)
-          .then(function(r){return r.ok?r.json():{}})
-          .then(function(data){
-            (data.roster||[]).forEach(function(p){
-              var pid=p.person&&p.person.id; if(pid) cache.allStars[pid]=true;
-            });
-          }).catch(function(){})
-      );
-    });
-  }
   if (eraCfg.showSS && year >= (eraCfg.ssSince || 0)) { endpoints.push(['ALSS','silverSluggers']); endpoints.push(['NLSS','silverSluggers']); }
   var fetches = endpoints.map(function(ep) {
     var awardId = ep[0], key = ep[1];
@@ -3878,6 +3864,21 @@ function fetchAwardsForYear(year, era) {
       })
       .catch(function() {});
   });
+  if (eraCfg.showASG) {
+    // ALAS/NLAS are not valid award IDs; All-Star selections live on game rosters
+    var asgBase = 'https://statsapi.mlb.com/api/v1';
+    [159,160].forEach(function(asgId){
+      fetches.push(
+        fetch(asgBase+'/roster/'+asgId+'?rosterType=allStarFull&season='+year)
+          .then(function(r){return r.ok?r.json():{}})
+          .then(function(data){
+            (data.roster||[]).forEach(function(p){
+              var pid=p.person&&p.person.id; if(pid) cache.allStars[pid]=true;
+            });
+          }).catch(function(){})
+      );
+    });
+  }
   return Promise.all(fetches).then(function() { return cache; });
 }
 
