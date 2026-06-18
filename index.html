@@ -1362,6 +1362,7 @@ var ERA_CONFIG = {
     fbColl: 'scores', fbCollHard: 'hardScores',
     statRanges: {
       g:[40,110,162], avg:[0.220,0.270,0.330], woba:[0.295,0.330,0.368],
+      obp:[0.295,0.340,0.390], slg:[0.375,0.435,0.540], ops:[0.670,0.775,0.930],
       r:[25,60,108],  hr:[0,15,44],            rbi:[20,60,115],
       tb:[80,200,355],sb:[0,10,34]
     }
@@ -1375,6 +1376,7 @@ var ERA_CONFIG = {
     fbColl: 'scores_steroid', fbCollHard: 'hardScores_steroid',
     statRanges: {
       g:[40,110,162], avg:[0.220,0.275,0.360], woba:[0.300,0.340,0.378],
+      obp:[0.310,0.360,0.415], slg:[0.400,0.460,0.580], ops:[0.710,0.820,0.995],
       r:[25,65,130],  hr:[0,20,60],            rbi:[20,70,145],
       tb:[80,210,380],sb:[0,10,40]
     }
@@ -1389,6 +1391,7 @@ var ERA_CONFIG = {
     fbColl: 'scores_nostalgia', fbCollHard: 'hardScores_nostalgia',
     statRanges: {
       g:[40,110,162], avg:[0.220,0.275,0.375], woba:[0.285,0.320,0.358],
+      obp:[0.285,0.335,0.385], slg:[0.355,0.415,0.510], ops:[0.640,0.750,0.895],
       r:[20,55,120],  hr:[0,12,50],            rbi:[15,55,120],
       tb:[60,185,340],sb:[0,20,100]
     }
@@ -3169,7 +3172,7 @@ function getStatRanges(era, year) {
   // Scale counting stat ceilings for shortened seasons (e.g. 1995: 144 games)
   return {
     g:   [sr.g[0],   Math.round(sr.g[1]*scale),   Math.round(sr.g[2]*scale)],
-    avg: sr.avg, woba: sr.woba,
+    avg: sr.avg, woba: sr.woba, obp: sr.obp, slg: sr.slg, ops: sr.ops,
     r:   [sr.r[0],   Math.round(sr.r[1]*scale),   Math.round(sr.r[2]*scale)],
     hr:  [sr.hr[0],  Math.round(sr.hr[1]*scale),  Math.round(sr.hr[2]*scale)],
     rbi: [sr.rbi[0], Math.round(sr.rbi[1]*scale), Math.round(sr.rbi[2]*scale)],
@@ -3403,7 +3406,7 @@ function playerWOBA(st, year) {
 function simulate() {
   var SC = ERA_SCORING[S.era || 'modern'];
   var hr=0, rbi=0, runs=0, sb=0, totalGames=0;
-  var wobaS=0, n=0;
+  var wobaS=0, avgS=0, obpS=0, slgS=0, n=0;
 
   for (var i = 0; i < 9; i++) {
     var slot = S.lineup[i];
@@ -3425,12 +3428,15 @@ function simulate() {
     rbi  += st.rbi;
     runs += st.runs;
     sb   += st.sb;
+    avgS += st.avg || 0; obpS += st.obp || 0; slgS += st.slg || 0;
+    avgS += st.avg || 0; obpS += st.obp || 0; slgS += st.slg || 0;
     totalGames += Math.min(st.games, 162);
     n++;
   }
 
   var agg = {
     woba: n ? wobaS/n : 0,
+    avg:  n ? avgS/n  : 0, obp: n ? obpS/n : 0, slg: n ? slgS/n : 0,
     hr: hr, rbi: rbi, runs: runs, sb: sb,
     games: totalGames
   };
@@ -3551,7 +3557,7 @@ function sortedPlayers() {
   players.sort(function(a,b) {
     var va, vb;
     if (col === 'name') { va = a.name; vb = b.name; return dir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
-    if (col === 'woba') { va = playerWOBA(a.stats); vb = playerWOBA(b.stats); }
+    if (col === 'ops')  { va = (a.stats.obp||0)+(a.stats.slg||0); vb = (b.stats.obp||0)+(b.stats.slg||0); }
     else { va = a.stats[col] !== undefined ? a.stats[col] : 0; vb = b.stats[col] !== undefined ? b.stats[col] : 0; }
     return dir==='asc' ? va-vb : vb-va;
   });
@@ -3964,7 +3970,7 @@ function renderRoster() {
   if (mobile) {
     // ── Mobile: card layout + sort bar ──────────────────────────
     var sortDefs = [
-      {col:'games',lbl:'G'},{col:'woba',lbl:'wOBA'},{col:'runs',lbl:'R'},
+      {col:'games',lbl:'G'},{col:'ops', lbl:'OPS'},{col:'runs',lbl:'R'},
       {col:'hr',lbl:'HR'},{col:'rbi',lbl:'RBI'},{col:'sb',lbl:'SB'}
     ];
     var sortBar = '<div class="sort-bar">';
@@ -3990,7 +3996,7 @@ function renderRoster() {
         + (S.hardMode ? '' :
           '<div class="pr-stats">'
           + '<span class="pr-stat-pill pr-stat-g" style="background:'+statTint(st.games,SR.g[0],SR.g[1],SR.g[2])+'"><span class="pr-stat-lbl">G</span>'+st.games+'</span>'
-          + '<span class="pr-stat-pill pr-stat-ops" style="background:'+statTint(playerWOBA(st),SR.woba[0],SR.woba[1],SR.woba[2])+'"><span class="pr-stat-lbl">wOBA</span>'+fmtSlash(playerWOBA(st))+'</span>'
+          + '<span class="pr-stat-pill pr-stat-ops" style="background:'+statTint((st.obp||0)+(st.slg||0),SR.ops[0],SR.ops[1],SR.ops[2])+'"><span class="pr-stat-lbl">OPS</span>'+fmtSlash((st.obp||0)+(st.slg||0))+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.runs,SR.r[0],SR.r[1],SR.r[2])+'"><span class="pr-stat-lbl">R</span>'+st.runs+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.hr,SR.hr[0],SR.hr[1],SR.hr[2])+'"><span class="pr-stat-lbl">HR</span>'+st.hr+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.rbi,SR.rbi[0],SR.rbi[1],SR.rbi[2])+'"><span class="pr-stat-lbl">RBI</span>'+st.rbi+'</span>'
@@ -4312,7 +4318,7 @@ function showResults() {
           +s.W.runs*_normStat(st.runs||0,s.FLOOR.runs/9,s.CEIL.runs/9)
           +s.W.sb*_normStat(st.sb,s.FLOOR.sb/9,s.CEIL.sb/9);
   }
-  function _tierCol(w) { return w>=.370?'#c9a44a':w>=.350?'#7abaff':w>=.330?'#4caf76':w>=.310?'#e09050':'#c07070'; }
+  function _tierCol(ops) { return ops>=1.0?'#c9a44a':ops>=.870?'#7abaff':ops>=.800?'#4caf76':ops>=.720?'#e09050':'#c07070'; }
 
   // ── Tab 1: Lineup ─────────────────────────────────────────────────────────
   (function() {
@@ -4320,8 +4326,8 @@ function showResults() {
     for (var i = 0; i < 9; i++) {
       var slot = S.lineup[i]; if (!slot) continue;
       var st = slot.player.stats;
-      var woba = playerWOBA(st);
-      var sc = _tierCol(woba);
+      var ops = (st.obp||0)+(st.slg||0);
+      var sc = _tierCol(ops);
       var bdg = '';
       if (slot.awards) {
         if (slot.awards.mvp) bdg += _mvpBadgeHtml(slot.awards.mvp,'fl-award-badge mvp-badge');
@@ -4336,7 +4342,7 @@ function showResults() {
           +'<div class="lu-ctx">'+slot.year+' · '+esc(slot.teamName)+'</div>'
         +'</div>'
         +'<div class="lu-right">'
-          +'<div class="lu-woba" style="font-size:11px;color:#c9a44a;font-weight:700">wOBA '+fmtSlash(playerWOBA(st))+'</div>'
+          
           +'<div class="lu-slash">'+fmtSlash(st.avg)+'/'+fmtSlash(st.obp)+'/'+fmtSlash(st.slg)+'</div>'
           +'<div class="lu-counts">'+Math.round(st.hr)+'HR · '+Math.round(st.rbi)+'RBI · '+Math.round(st.runs||0)+'R</div>'
         +'</div>'
@@ -4349,11 +4355,12 @@ function showResults() {
   (function() {
     var SR2 = getStatRanges(S.era||'modern', S.spin ? S.spin.year : 2024);
     var cols = [
-      {k:'avg', l:'AVG', tint:function(v){return statTint(v,SR2.avg[0],SR2.avg[1],SR2.avg[2]);},  fmt:fmtSlash},
-      {k:'woba',l:'wOBA',tint:function(v){return statTint(v,SR2.woba[0],SR2.woba[1],SR2.woba[2]);},fmt:fmtSlash,woba:true},
-      {k:'r',   l:'R',   tint:function(v){return statTint(v,SR2.r[0],  SR2.r[1],  SR2.r[2]);},  fmt:function(v){return Math.round(v);}},
-      {k:'hr',  l:'HR',  tint:function(v){return statTint(v,SR2.hr[0], SR2.hr[1], SR2.hr[2]);}, fmt:function(v){return Math.round(v);}},
-      {k:'rbi', l:'RBI', tint:function(v){return statTint(v,SR2.rbi[0],SR2.rbi[1],SR2.rbi[2]);},fmt:function(v){return Math.round(v);}},
+      {k:'avg',l:'AVG',tint:function(v){return statTint(v,SR2.avg[0],SR2.avg[1],SR2.avg[2]);},fmt:fmtSlash},
+      {k:'obp',l:'OBP',tint:function(v){return statTint(v,SR2.obp[0],SR2.obp[1],SR2.obp[2]);},fmt:fmtSlash},
+      {k:'slg',l:'SLG',tint:function(v){return statTint(v,SR2.slg[0],SR2.slg[1],SR2.slg[2]);},fmt:fmtSlash},
+      {k:'r',  l:'R',  tint:function(v){return statTint(v,SR2.r[0],  SR2.r[1],  SR2.r[2]);},  fmt:function(v){return Math.round(v);}},
+      {k:'hr', l:'HR', tint:function(v){return statTint(v,SR2.hr[0], SR2.hr[1], SR2.hr[2]);}, fmt:function(v){return Math.round(v);}},
+      {k:'rbi',l:'RBI',tint:function(v){return statTint(v,SR2.rbi[0],SR2.rbi[1],SR2.rbi[2]);},fmt:function(v){return Math.round(v);}},
     ];
     var html = '<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-th-row"></th>';
     for (var c=0;c<cols.length;c++) html += '<th class="hm-th">'+cols[c].l+'</th>';
@@ -4365,7 +4372,7 @@ function showResults() {
       html += '<tr><td class="hm-th-row"><span class="hm-pos">'+POS[i]+'</span> '+esc(last)+'</td>';
       for (var c=0;c<cols.length;c++) {
         var col=cols[c];
-        var val=col.k==='r'?(st.runs||0):col.k==='woba'?playerWOBA(st):(st[col.k]||0);
+        var val=col.k==='r'?(st.runs||0):(st[col.k]||0);
         html += '<td class="hm-cell-wrap"><div class="hm-cell" style="background:'+col.tint(val)+'">'+col.fmt(val)+'</div></td>';
       }
       html += '</tr>';
@@ -4385,7 +4392,7 @@ function showResults() {
     for (var i=0;i<9;i++) {
       var slot = S.lineup[i]; if (!slot) continue;
       var st = slot.player.stats;
-      pts.push({name:slot.player.name.split(' ').slice(-1)[0],obp:st.obp||0,slg:st.slg||0,hr:st.hr||0,woba:playerWOBA(st)});
+      pts.push({name:slot.player.name.split(' ').slice(-1)[0],obp:st.obp||0,slg:st.slg||0,hr:st.hr||0,woba:playerWOBA(st, S.spin ? S.spin.year : 2019)});
     }
     if (!pts.length) { document.getElementById('dash-plot').innerHTML = ''; return; }
     var obpMin=Math.max(0.220,Math.min.apply(null,pts.map(function(p){return p.obp;}))-0.030);
@@ -4453,14 +4460,14 @@ function showResults() {
       {k:'rbi', l:'RBI',f:function(v){return Math.round(v);}},
       {k:'runs',l:'R',  f:function(v){return Math.round(v);}},
       {k:'avg', l:'AVG',f:fmtSlash},
-      {k:'woba',l:'wOBA',f:fmtSlash},
+      {k:'ops', l:'OPS', f:fmtSlash},
       {k:'sb',  l:'SB', f:function(v){return Math.round(v);}},
     ];
     var players=[];
     for(var i=0;i<9;i++){
       var slot=S.lineup[i]; if(!slot) continue;
       var st=slot.player.stats;
-      players.push({name:slot.player.name,pos:POS[i],year:slot.year,hr:st.hr,rbi:st.rbi,runs:st.runs||0,avg:st.avg,woba:playerWOBA(st),sb:st.sb});
+      players.push({name:slot.player.name,pos:POS[i],year:slot.year,hr:st.hr,rbi:st.rbi,runs:st.runs||0,avg:st.avg,ops:(st.obp||0)+(st.slg||0),sb:st.sb});
     }
     var html='<div class="ld-grid">';
     for(var c=0;c<cats.length;c++){
@@ -4492,7 +4499,7 @@ function showResults() {
       +chip(fmtSlash(a.avg),       'AVG', 'var(--cream)')
       +chip(fmtSlash(a.obp),       'OBP', 'var(--cream)')
       +chip(fmtSlash(a.slg),       'SLG', 'var(--cream)')
-      +chip(fmtSlash(a.woba),      'wOBA','var(--gold)')
+      +chip(fmtSlash(a.obp+a.slg), 'OPS', 'var(--cream)')
       +'</div><div class="agg-section-lbl">Totals</div><div class="agg-chips">'
       +chip(Math.round(a.hr),   'HR',  'var(--cream)')
       +chip(Math.round(a.rbi),  'RBI', 'var(--cream)')
