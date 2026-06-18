@@ -344,6 +344,12 @@ body::before {
 .team-logo[data-abbr="nyy"], .roster-logo[data-abbr="nyy"] {
   filter: brightness(0) invert(1); opacity: 0.82;
 }
+.team-logo[data-abbr="sd"], .roster-logo[data-abbr="sd"] {
+  filter: saturate(3) brightness(1.5);
+}
+.team-logo[data-abbr="min"], .roster-logo[data-abbr="min"] {
+  filter: brightness(0) invert(1); opacity: 0.82;
+}
 .slot-win.cycling .slot-val {
   opacity: .5; color: var(--muted) !important;
 }
@@ -4012,7 +4018,8 @@ var S = {
 };
 
 function teamLogoUrl(abbr) {
-  // ESPN CDN — CWS is the only abbr that differs (espn uses 'chw')
+  var REMAP = { 'CAL':'LAA', 'ANA':'LAA', 'FLA':'MIA' };
+  abbr = REMAP[abbr.toUpperCase()] || abbr;
   var id = abbr.toLowerCase() === 'cws' ? 'chw' : abbr.toLowerCase();
   return 'https://a.espncdn.com/i/teamlogos/mlb/500/' + id + '.png';
 }
