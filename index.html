@@ -3852,6 +3852,7 @@ function fetchAwardsForYear(year, era) {
     ['ALROY', 'roys'], ['NLROY', 'roys'],
     ['ALMVP', 'mvpWinners'], ['NLMVP', 'mvpWinners'],
   ];
+  if (eraCfg.showASG) { endpoints.push(['ALAS','allStars']); endpoints.push(['NLAS','allStars']); }
   if (eraCfg.showSS && year >= (eraCfg.ssSince || 0)) { endpoints.push(['ALSS','silverSluggers']); endpoints.push(['NLSS','silverSluggers']); }
   var fetches = endpoints.map(function(ep) {
     var awardId = ep[0], key = ep[1];
