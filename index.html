@@ -1449,24 +1449,24 @@ var ERA_CONFIG = {
 var ERA_SCORING = {
   modern: {
     W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
-    CEIL:  { woba:.360, hr:250, rbi:840, runs:840, sb:120 },
+    CEIL:  { woba:.360, hr:235, rbi:800, runs:800, sb:160 },
     FLOOR: { woba:.285, hr:30,  rbi:450, runs:430, sb:0   }
   },
   steroid: {
-    W:     { woba:.50, hr:.20, rbi:.12, runs:.12, sb:.06 },
-    CEIL:  { woba:.390, hr:312, rbi:1000, runs:935, sb:210 },
+    W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
+    CEIL:  { woba:.390, hr:200, rbi:840,  runs:810, sb:120 },
     FLOOR: { woba:.290, hr:35,  rbi:490, runs:460, sb:0   }
   },
   nostalgia: {
     W:     { woba:.50, hr:.14, rbi:.12, runs:.12, sb:.12 },
-    CEIL:  { woba:.355, hr:215, rbi:810, runs:800, sb:240 },
+    CEIL:  { woba:.355, hr:195, rbi:770,  runs:775, sb:190 },
     FLOOR: { woba:.280, hr:20,  rbi:400, runs:390, sb:0   }
   }
 };
 
 // Legacy aliases — kept for any external references; scoring driven by ERA_SCORING above
 var W     = { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 };
-var CEIL  = { woba:.360, hr:250, rbi:840, runs:840, sb:120 };
+var CEIL  = { woba:.360, hr:235, rbi:800, runs:800, sb:160 };
 var FLOOR = { woba:.285, hr:30,  rbi:450, runs:430, sb:0   };
 
 // MLB league averages by season — rate stats used for durability-adjusted normalization
