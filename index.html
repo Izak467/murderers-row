@@ -5075,11 +5075,11 @@ function showResults() {
     var SR2 = getStatRanges(S.era||'modern', S.spin ? S.spin.year : 2024);
     var cols = [
       {k:'avg',l:'AVG',tint:function(v){return statTint(v,SR2.avg[0],SR2.avg[1],SR2.avg[2]);},fmt:fmtSlash},
-      {k:'obp',l:'OBP',tint:function(v){return statTint(v,SR2.obp[0],SR2.obp[1],SR2.obp[2]);},fmt:fmtSlash},
-      {k:'slg',l:'SLG',tint:function(v){return statTint(v,SR2.slg[0],SR2.slg[1],SR2.slg[2]);},fmt:fmtSlash},
+      {k:'ops',l:'OPS',tint:function(v){return statTint(v,SR2.ops[0],SR2.ops[1],SR2.ops[2]);},fmt:fmtSlash},
       {k:'r',  l:'R',  tint:function(v){return statTint(v,SR2.r[0],  SR2.r[1],  SR2.r[2]);},  fmt:function(v){return Math.round(v);}},
       {k:'hr', l:'HR', tint:function(v){return statTint(v,SR2.hr[0], SR2.hr[1], SR2.hr[2]);}, fmt:function(v){return Math.round(v);}},
       {k:'rbi',l:'RBI',tint:function(v){return statTint(v,SR2.rbi[0],SR2.rbi[1],SR2.rbi[2]);},fmt:function(v){return Math.round(v);}},
+      {k:'sb', l:'SB', tint:function(v){return statTint(v,SR2.sb[0], SR2.sb[1], SR2.sb[2]);}, fmt:function(v){return Math.round(v);}},
     ];
     var html = '<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-th-row"></th>';
     for (var c=0;c<cols.length;c++) html += '<th class="hm-th">'+cols[c].l+'</th>';
@@ -5091,7 +5091,7 @@ function showResults() {
       html += '<tr><td class="hm-th-row"><span class="hm-pos">'+POS[i]+'</span> '+esc(last)+'</td>';
       for (var c=0;c<cols.length;c++) {
         var col=cols[c];
-        var val=col.k==='r'?(st.runs||0):(st[col.k]||0);
+        var val=col.k==='r'?(st.runs||0):col.k==='ops'?((st.obp||0)+(st.slg||0)):(st[col.k]||0);
         html += '<td class="hm-cell-wrap"><div class="hm-cell" style="background:'+col.tint(val)+'">'+col.fmt(val)+'</div></td>';
       }
       html += '</tr>';
