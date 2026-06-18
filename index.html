@@ -935,23 +935,23 @@ body::before {
 
 /* ─── Era theme: Steroid (muted indigo) ─────────────────────── */
 body.era-steroid {
-  --bg: #0b0c1e;
-  --surface: #11102a;
-  --surface2: #181638;
-  --border: #272450;
-  --border-lt: #363062;
-  --muted: #636088;
-  --navy-lt: #524e90;
+  --bg: #141230;
+  --surface: #1a1840;
+  --surface2: #21204d;
+  --border: #2e2b5e;
+  --border-lt: #3d3a70;
+  --muted: #706d98;
+  --navy-lt: #5e5a9e;
 }
 body.era-steroid .roster-card-header,
 body.era-steroid .roster-table th,
-body.era-steroid .sort-bar { background: #090a16; }
-body.era-steroid .roster-table td { border-color: #1e1e3e; }
-body.era-steroid .ls.filled { background: #0e0e22; }
-body.era-steroid .ls.moving { background: #161432; }
+body.era-steroid .sort-bar { background: #100e28; }
+body.era-steroid .roster-table td { border-color: #252252; }
+body.era-steroid .ls.filled { background: #161435; }
+body.era-steroid .ls.moving { background: #1c1a44; }
 body.era-steroid .move-banner,
-body.era-steroid .confirm-bar { background: #0e0e20; border-color: var(--gold-dk); }
-body.era-steroid .lb-row { border-color: #1e1e3e; }
+body.era-steroid .confirm-bar { background: #141230; border-color: var(--gold-dk); }
+body.era-steroid .lb-row { border-color: #252252; }
 body.era-steroid .roster-table tr:hover td { background: var(--surface2); }
 
 /* ─── Era theme: Nostalgia (muted forest) ───────────────────── */
@@ -4193,7 +4193,7 @@ function applyEraTheme(era) {
   var root = document.documentElement;
   var themes = {
     modern:   { bg:'#0d1b2a', surface:'#132540', surface2:'#1c3355', border:'#2c4a6a', borderLt:'#3d6080', muted:'#6a82a0' },
-    steroid:  { bg:'#0b0c1e', surface:'#11102a', surface2:'#181638', border:'#272450', borderLt:'#363062', muted:'#636088' },
+    steroid:  { bg:'#141230', surface:'#1a1840', surface2:'#21204d', border:'#2e2b5e', borderLt:'#3d3a70', muted:'#706d98' },
     nostalgia:{ bg:'#0a1410', surface:'#0e1c14', surface2:'#132018', border:'#1e3224', borderLt:'#2a4430', muted:'#5e7862' },
     postwar:  { bg:'#061414', surface:'#0c1e1e', surface2:'#102828', border:'#1a3838', borderLt:'#224e4e', muted:'#4a7272' },
     golden:   { bg:'#160c02', surface:'#221206', surface2:'#2e1a0a', border:'#4e3010', borderLt:'#664018', muted:'#8a6428' },
