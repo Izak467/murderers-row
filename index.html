@@ -4058,12 +4058,14 @@ function fetchRoster(teamId, year) {
 
     var OHTANI_ID = 660271; // only pitcher exempt from exclusion
     var players = [];
+    var seenPlayers = {};
     var hits = []; (hitData.stats||[]).forEach(function(s){hits=hits.concat(s.splits||[]);});
     for (var j = 0; j < hits.length; j++) {
       var hs = hits[j];
       var p  = hs.player;
       var st = hs.stat;
       if (!p || !st) continue;
+      if (seenPlayers[p.id]) continue;
       if ((st.gamesPlayed || 0) < 40) continue;
       // Exclude pure pitchers (pitched but no fielding positions). Ohtani exempt.
       if (pitchers[p.id] && !elig[p.id] && p.id !== OHTANI_ID) continue;
@@ -4076,6 +4078,7 @@ function fetchRoster(teamId, year) {
 
       var tb = st.totalBases || ((st.hits||0) + (st.doubles||0) + 2*(st.triples||0) + 3*(st.homeRuns||0));
 
+      seenPlayers[p.id] = true;
       players.push({
         id:   p.id,
         name: p.fullName,
@@ -5195,6 +5198,7 @@ function showResults() {
     for(var i=0;i<9;i++){
       var slot=S.lineup[i]; if(!slot) continue;
       var st=slot.player.stats;
+      seenPlayers[p.id] = true;
       players.push({name:slot.player.name,pos:POS[i],year:slot.year,hr:st.hr,rbi:st.rbi,runs:st.runs||0,avg:st.avg,ops:(st.obp||0)+(st.slg||0),sb:st.sb});
     }
     var html='<div class="ld-grid">';

@@ -88,13 +88,12 @@ The FLOOR represents the lower bound of what a genuinely bad but plausible nine-
 
 | Component | Modern | Steroid | Nostalgia | Rationale |
 |-----------|--------|---------|-----------|-----------|
-| wOBA | 52% | 52% | 52% | Best single measure of offensive quality; era-adjusted by construction |
+| wOBA | 50% | 50% | 50% | Best single measure of offensive quality; era-adjusted by construction |
 | HR | 16% | 20% | 14% | More weight in HR-inflated steroid era; less in contact-and-speed nostalgia era |
 | RBI | 12% | 12% | 12% | Consistent proxy for run production across eras |
-| Runs | 10% | 10% | 10% | Correlated with RBI but measures run scoring rather than run driving |
+| Runs | 12% | 12% | 12% | Correlated with RBI but measures run scoring rather than run driving |
 | SB | 10% | 6% | 12% | Stolen bases peaked in value pre-steroid era; negligible in 1995–2004 |
 
-*Note: runs weight was reduced from 12% to 10% (with the 2% redistributed to wOBA) to reduce the implicit double-weighting of run production, since RBI and Runs are highly correlated and each measuring similar run-context outcomes.*
 
 ### 5.3 Nostalgia Era SB Ceiling
 
