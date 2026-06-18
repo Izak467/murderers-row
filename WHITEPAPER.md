@@ -145,7 +145,7 @@ A deliberate design choice keeps wOBA invisible to the player. The game displays
 
 ### 7.1 The Scatter Plot
 
-The "Power vs. Patience" scatter plot in the results dashboard charts OBP (x-axis) against SLG (y-axis), with bubble size proportional to HR. The **color** of each bubble, however, is mapped to the player's per-season wOBA on the wOBA tier color scale. A casual player sees a pretty chart; an informed player notices that some bubbles are colored differently than their OPS would suggest and begins to understand why.
+The "Power vs. Patience" scatter plot in the results dashboard charts OBP (x-axis) against SLG (y-axis), with bubble size proportional to HR. The **color** of each bubble is mapped to OPS (OBP + SLG) — literally the sum of the two visible axes — so the color gradient tracks each player's position in the chart space coherently. A player in the upper-right corner (high OBP and high SLG) will naturally appear with the warmest color; a player in the lower-left will appear cool. This makes the visualization self-consistent: no external knowledge is required to interpret the color.
 
 ### 7.2 HR Double-Counting
 
