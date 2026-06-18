@@ -1194,7 +1194,6 @@ body.era-deadball::after {
   <div>
     <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:7px">Your Lineup</div>
     <div class="lineup-bar" id="lineup-bar"></div>
-    <div id="pos-tracker" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px"></div>
     <div id="move-banner" style="display:none;margin-top:8px"></div>
     <div class="move-help" id="move-help">
       ↔ <strong style="color:var(--gold-lt)">Move Token</strong> — once a player is placed, click the <strong style="color:var(--gold-lt)">↔</strong> icon on their lineup slot to reassign them to any other eligible open position. You have <strong style="color:var(--gold-lt)">two uses</strong> per game.
@@ -1229,6 +1228,8 @@ body.era-deadball::after {
     </div>
   </div>
 
+  <div id="pos-tracker" style="display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 2px"></div>
+
   <!-- Roster -->
   <div class="roster-card">
     <div class="roster-card-header">
@@ -1237,7 +1238,7 @@ body.era-deadball::after {
       <div class="roster-title" id="roster-title">Spinning…</div>
       <div id="roster-filters">
         <button class="filter-chip" id="avail-filter-btn" onclick="toggleAvailableFilter()">Available only</button>
-        <button class="filter-chip" id="dh-filter-btn" onclick="toggleDHFilter()" title="Exclude DH when deciding who counts as available">NO DH View</button>
+        <button class="filter-chip" id="dh-filter-btn" onclick="toggleDHFilter()" title="Exclude DH when deciding who counts as available">No DH</button>
         <div class="pos-dd-wrap">
           <button class="filter-chip" id="pos-filter-btn" onclick="togglePosDropdown(event)">Position ▾</button>
           <div class="pos-dropdown" id="pos-dropdown" onclick="event.stopPropagation()"></div>
@@ -4911,21 +4912,26 @@ function _buildPosDropdownHtml() {
   }
   html += '<div class="pos-dd-footer">'
     + '<button class="pos-dd-all" onclick="clearPendingPos()">Clear</button>'
-    + '<button class="pos-dd-ok" onclick="applyPosFilter()">OK</button>'
     + '</div>';
   return html;
 }
 
 function togglePendingPos(pos) {
-  var idx = S._pendingPos.indexOf(pos);
-  if (idx === -1) S._pendingPos.push(pos);
-  else S._pendingPos.splice(idx, 1);
+  var idx = S.posFilter.indexOf(pos);
+  if (idx === -1) S.posFilter.push(pos);
+  else S.posFilter.splice(idx, 1);
+  S._pendingPos = S.posFilter.slice();
+  updateFilterBar(false);
+  renderRoster();
 }
 
 function clearPendingPos() {
+  S.posFilter = [];
   S._pendingPos = [];
   var dd = document.getElementById('pos-dropdown');
   if (dd) dd.innerHTML = _buildPosDropdownHtml();
+  updateFilterBar(false);
+  renderRoster();
 }
 
 function applyPosFilter() {
