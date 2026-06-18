@@ -5204,7 +5204,7 @@ function showResults() {
       for(var p=0;p<sorted.length;p++){
         var medal=p===0?'ld-gold':p===1?'ld-silver':p===2?'ld-bronze':'';
         var yr = sorted[p].year ? ' <span style="font-size:8px;color:var(--muted);font-weight:400">\''+String(sorted[p].year).slice(2)+'</span>' : '';
-        html+='<div class="ld-row '+medal+'"><span class="ld-rank">'+(p+1)+'</span><span class="ld-name" title="'+esc(sorted[p].name)+'">'+esc(sorted[p].name.split(' ').pop())+yr+'</span><span class="ld-val">'+cat.f(sorted[p][cat.k])+'</span></div>';
+        html+='<div class="ld-row '+medal+'"><span class="ld-rank">'+(p+1)+'</span><span class="ld-name" title="'+esc(sorted[p].name)+'">'+esc(_lastName(sorted[p].name))+yr+'</span><span class="ld-val">'+cat.f(sorted[p][cat.k])+'</span></div>';
       }
       html+='</div>';
     }
