@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Murderers' Row — Can you go 162-0?</title>
-<meta property="og:title" content="Murderers' Row — Can you go 162-0?">
+<title>Murderers' Row</title>
+<meta property="og:title" content="Murderers' Row">
 <meta property="og:description" content="Build the most feared lineup in baseball history. Spin random MLB teams and years, draft legends, and see if you can go undefeated.">
 <meta property="og:url" content="https://murderers-row.net/">
 <meta property="og:image" content="https://murderers-row.net/og-image.png">
@@ -12,7 +12,7 @@
 <meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Murderers' Row — Can you go 162-0?">
+<meta name="twitter:title" content="Murderers' Row">
 <meta name="twitter:description" content="Build the most feared lineup in baseball history. Spin random MLB teams and years, draft legends, and see if you can go undefeated.">
 <meta name="twitter:image" content="https://murderers-row.net/og-image.png">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
@@ -1089,7 +1089,7 @@ body.era-deadball::after {
 <div id="screen-landing" class="screen active">
   <div class="hero">
     <div class="hero-title"><span>Murderers'</span> Row</div>
-    <div class="hero-tagline">Can you go 162-0?</div>
+    <div class="hero-tagline">The lineup history never got to see.</div>
     <div class="hero-sub">Build the most feared lineup in baseball history · Choose your era</div>
   </div>
 
@@ -1110,6 +1110,11 @@ body.era-deadball::after {
         <span class="era-tab-icon">📺</span>
         <span class="era-tab-name">Hardball Era</span>
         <span class="era-tab-years">1969 – 1993</span>
+      </button>
+      <button class="era-tab" data-era="postwar" onclick="selectEra('postwar')">
+        <span class="era-tab-icon">⚾</span>
+        <span class="era-tab-name">Post-War Era</span>
+        <span class="era-tab-years">1946 – 1968</span>
       </button>
     </div>
     <div class="era-desc-area">
@@ -1434,6 +1439,20 @@ var ERA_CONFIG = {
       r:[20,55,120],  hr:[0,12,50],            rbi:[15,55,120],
       tb:[60,185,340],sb:[0,20,100]
     }
+  },
+  postwar: {
+    name: 'Post-War Era',
+    yearPool: [1946,1947,1948,1949,1950,1951,1952,1953,1954,1955,1956,1957,1958,1959,1960,1961,1962,1963,1964,1965,1966,1967,1968],
+    seasonScale: {},
+    showSS: false, showASG: true, showROY: true, showMVP: true,
+    lahman: true,
+    fbColl: 'scores_postwar', fbCollHard: 'hardScores_postwar',
+    statRanges: {
+      g:[30,100,154], avg:[0.220,0.265,0.340], woba:[0.275,0.310,0.365],
+      obp:[0.285,0.325,0.400], slg:[0.330,0.410,0.560], ops:[0.615,0.735,0.960],
+      r:[15,50,115],  hr:[0,12,47],            rbi:[15,55,130],
+      tb:[55,170,345],sb:[0,8,65]
+    }
   }
 };
 
@@ -1443,18 +1462,23 @@ var ERA_CONFIG = {
 var ERA_SCORING = {
   modern: {
     W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
-    CEIL:  { woba:.360, hr:235, rbi:800, runs:800, sb:160 },
+    CEIL:  { woba:.378, hr:295, rbi:900, runs:880, sb:200 },
     FLOOR: { woba:.285, hr:30,  rbi:450, runs:430, sb:0   }
   },
   steroid: {
     W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
-    CEIL:  { woba:.390, hr:200, rbi:840,  runs:810, sb:120 },
+    CEIL:  { woba:.400, hr:340, rbi:1050, runs:960, sb:230 },
     FLOOR: { woba:.290, hr:35,  rbi:490, runs:460, sb:0   }
   },
   nostalgia: {
-    W:     { woba:.50, hr:.14, rbi:.12, runs:.12, sb:.12 },
-    CEIL:  { woba:.355, hr:195, rbi:770,  runs:775, sb:190 },
+    W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
+    CEIL:  { woba:.375, hr:240, rbi:855, runs:840, sb:270 },
     FLOOR: { woba:.280, hr:20,  rbi:400, runs:390, sb:0   }
+  },
+  postwar: {
+    W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
+    CEIL:  { woba:.368, hr:225, rbi:800, runs:785, sb:180 },
+    FLOOR: { woba:.275, hr:10,  rbi:380, runs:350, sb:0   }
   }
 };
 
@@ -3968,7 +3992,7 @@ function getAwardBadgesHtml(player, year) {
   var ad = S.awardData;
   var eraCfg = ERA_CONFIG[S.era || 'modern'];
   if (eraCfg.showMVP) {
-    var mvpRank = (ad && ad.mvpWinners && ad.mvpWinners[player.id]) ? 1 : getMvpRank(player.name, year);
+    var mvpRank = (ad && ad.mvpWinners && ad.mvpWinners[player.id]) || getMvpRank(player.name, year);
     if (mvpRank) html += _mvpBadgeHtml(mvpRank, 'award-badge mvp-badge');
   }
   if (eraCfg.showROY && ad && ad.roys && ad.roys[player.id]) {
@@ -4206,7 +4230,8 @@ var _selectedEra = 'modern';
 var _ERA_DESCS = {
   modern:   'Launch angles are optimized, the shift is banned, and every front office has a MIT grad running the numbers. From Pujols to Ohtani, the deepest and most statistically analyzed player pool in history. Build wisely.',
   steroid:  'McGwire hit 70. Sosa hit 66. Bonds hit 73. Nobody in the commissioner\'s office was asking too many questions. The most historically offensive stretch in baseball history — and we mean that both ways.',
-  nostalgia:'From the Big Red Machine to the Iron Man. Rickey Henderson stole bases before you could blink, Tony Gwynn made .300 look like a down year, and the stolen base was a legitimate weapon of war. Your dad\'s game at its absolute finest.'
+  nostalgia:'From the Big Red Machine to the Iron Man. Rickey Henderson stole bases before you could blink, Tony Gwynn made .300 look like a down year, and the stolen base was a legitimate weapon of war. Your dad\'s game at its absolute finest.',
+  postwar: 'The golden age of baseball. Jackie broke the color barrier, Willie Mays made the game look effortless, and Mickey Mantle hit baseballs into orbit. From .406 to 61*, every legend you\'ve ever heard of played right here.'
 };
 
 function selectEra(eraKey) {
