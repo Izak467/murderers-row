@@ -4237,24 +4237,30 @@ function playerWOBA(st, year) {
 }
 
 var STEROID_ENHANCED = {
-  // Mitchell Report / federal investigation / confirmed
-  'Barry Bonds':true,'Roger Clemens':true,'Mark McGwire':true,'Sammy Sosa':true,
-  'Alex Rodriguez':true,'Jason Giambi':true,'Gary Sheffield':true,'Manny Ramirez':true,
-  'Rafael Palmeiro':true,'Andy Pettitte':true,'Miguel Tejada':true,'David Justice':true,
-  'Chuck Knoblauch':true,'Mo Vaughn':true,'Troy Glaus':true,'Jeremy Giambi':true,
-  'Kevin Brown':true,'Benito Santiago':true,
-  // Admitted use
-  'Ken Caminiti':true,'Jose Canseco':true,
-  // Strong circumstantial (Canseco-named / widely documented)
-  'Juan Gonzalez':true,
-  // 2003 anonymous survey test (leaked 2009) — always maintained innocence, you decide
-  'David Ortiz':true,
-  // Statistical anomaly — one-year flag only
-  'Brady Anderson':1996,'Bret Boone':2001,'Luis Gonzalez':2001
+  // Career-long / admitted throughout / no clear window
+  'Mark McGwire':true,'Ken Caminiti':true,'Jose Canseco':true,
+  'Rafael Palmeiro':true,'Manny Ramirez':true,'Juan Gonzalez':true,
+  'Gary Sheffield':true,'Miguel Tejada':true,'Chuck Knoblauch':true,
+  'David Justice':true,'Mo Vaughn':true,'Jeremy Giambi':true,'Benito Santiago':true,
+  // Pitchers (never appear in lineup)
+  'Roger Clemens':true,'Andy Pettitte':true,'Kevin Brown':true,
+  // Year-range specific — evidence tied to a defined window
+  'Barry Bonds':    {from:2000,to:2004}, // BALCO era; pre-2000 was HOF-but-human
+  'Alex Rodriguez': {from:2001,to:2003}, // admitted specifically to Texas Rangers years
+  'Sammy Sosa':     {from:1998,to:2002}, // 30-HR guy then 60+ three times then cratered
+  'Jason Giambi':   {from:2000,to:2002}, // Oakland peak; Yankees years visibly diminished
+  'David Ortiz':    {from:2003,to:2004}, // leaked 2003 survey; Twins castoff to monster
+  'Troy Glaus':     {from:2000,to:2001}, // 47 HR in 2000 miles above anything before/after
+  // Single-year statistical anomalies
+  'Brady Anderson': {from:1996,to:1996},
+  'Bret Boone':     {from:2001,to:2001},
+  'Luis Gonzalez':  {from:2001,to:2001}
 };
 function isEnhanced(name, year) {
   var v = STEROID_ENHANCED[name];
-  return v === true || v === year;
+  if (!v) return false;
+  if (v === true) return true;
+  return year >= v.from && year <= v.to;
 }
 
 function simulate() {
