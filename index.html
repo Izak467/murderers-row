@@ -879,7 +879,7 @@ body::before {
   overflow: hidden;
   margin-bottom: 16px;
 }
-.era-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.era-tabs { display: flex; border-bottom: 1px solid var(--border); position: relative; }
 .era-tab {
   flex: 1;
   background: transparent; border: none;
@@ -4844,7 +4844,8 @@ function selectEra(eraKey) {
   var activeTab = document.querySelector('.era-tab.active');
   if (activeTab && activeTab.parentNode) {
     var _ts = activeTab.parentNode;
-    var _tgt = activeTab.offsetLeft - _ts.clientWidth/2 + activeTab.offsetWidth/2;
+    var _tabR = activeTab.getBoundingClientRect(), _tsR = _ts.getBoundingClientRect();
+    var _tgt = _ts.scrollLeft + (_tabR.left - _tsR.left) - _ts.clientWidth/2 + _tabR.width/2;
     _ts.scrollTo({left: Math.min(Math.max(0, _tgt), _ts.scrollWidth - _ts.clientWidth), behavior:'smooth'});
   }
   var el = document.getElementById('era-desc-text');
