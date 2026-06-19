@@ -1202,7 +1202,7 @@ body.era-deadball::after {
     <div class="slot-machine-header">
       <div style="display:flex;align-items:center;gap:8px">
         <span class="slot-machine-icon">⚾</span>
-        <span class="slot-machine-label">The Pull</span>
+        <span class="slot-machine-label">The Draft</span>
       </div>
       <span id="sm-record" class="slot-machine-record"></span>
     </div>
@@ -4969,7 +4969,7 @@ function buildConfirmBar() {
   if (!pa) return '';
   return '<div class="confirm-bar">'
     +'<div class="confirm-bar-text">Slot <strong>'+esc(_lastName(pa.playerName))+'</strong> at <strong>'+pa.posName+'</strong>?</div>'
-    +'<button class="confirm-yes-btn" onclick="confirmAssign()">✓ Sign \'Em</button>'
+    +'<button class="confirm-yes-btn" onclick="confirmAssign()">✓ Lock In</button>'
     +'<button class="confirm-no-btn" onclick="cancelAssign()">Cancel</button>'
     +'</div>';
 }
