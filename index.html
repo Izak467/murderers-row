@@ -122,7 +122,14 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+@property --bg        { syntax: '<color>'; inherits: true; initial-value: #0d1b2a; }
+@property --surface   { syntax: '<color>'; inherits: true; initial-value: #132540; }
+@property --surface2  { syntax: '<color>'; inherits: true; initial-value: #1c3355; }
+@property --border    { syntax: '<color>'; inherits: true; initial-value: #2c4a6a; }
+@property --border-lt { syntax: '<color>'; inherits: true; initial-value: #3d6080; }
+@property --muted     { syntax: '<color>'; inherits: true; initial-value: #6a82a0; }
 :root {
+  transition: --bg .35s ease, --surface .35s ease, --surface2 .35s ease, --border .35s ease, --border-lt .35s ease, --muted .35s ease;
   --bg:         #0d1b2a;
   --surface:    #132540;
   --surface2:   #1c3355;
@@ -1116,19 +1123,19 @@ body.era-deadball::after {
   opacity: .58; transform: scale(.955);
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--border);
+  border-top: 3px solid var(--border);
 }
-.era-snap-card.esc-active { opacity: 1; transform: scale(1); border-color: var(--gold); border-left-color: var(--gold); }
+.era-snap-card.esc-active { opacity: 1; transform: scale(1); border-color: var(--border); border-top-color: var(--gold); }
 .esc-emoji { font-size: 28px; line-height: 1; }
 .esc-name { font-family: Georgia, serif; font-size: 16px; font-weight: 700; color: rgba(255,255,255,.95); letter-spacing: .3px; }
 .esc-years { font-size: 10px; color: var(--muted); letter-spacing: 1.8px; text-transform: uppercase; }
-.esc-card-deadball { border-left-color: #8B2030; }
-.esc-card-golden { border-left-color: #b08820; }
-.esc-card-postwar { border-left-color: #1080a0; }
-.esc-card-nostalgia { border-left-color: #208050; }
-.esc-card-steroid { border-left-color: #8030c0; }
-.esc-card-modern { border-left-color: #2860c0; }
-.era-snap-card.esc-active { border-left-color: var(--gold); }
+.esc-card-deadball { border-top-color: #8B2030; }
+.esc-card-golden { border-top-color: #b08820; }
+.esc-card-postwar { border-top-color: #1080a0; }
+.esc-card-nostalgia { border-top-color: #208050; }
+.esc-card-steroid { border-top-color: #8030c0; }
+.esc-card-modern { border-top-color: #2860c0; }
+.era-snap-card.esc-active { border-top-color: var(--gold); }
 .esc-arrow { position:absolute; top:50%; transform:translateY(-50%); z-index:20; background:none; border:none; outline:none; cursor:pointer; color:rgba(255,255,255,.42); font-size:20px; line-height:1; padding:14px 10px; -webkit-tap-highlight-color:transparent; transition:color .18s; user-select:none; -webkit-user-select:none; }
 .esc-arrow:hover { color: rgba(255,255,255,.78); }
 .esc-arrow-l { left: 0; }
@@ -4512,19 +4519,7 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 function _lastName(n) { var p=n.split(' '); return p.length>2 && /^(Jr\.?|Sr\.?|I{2,3}|IV|V)$/i.test(p[p.length-1]) ? p[p.length-2] : p[p.length-1]; }
 
 // ─── Era theme application ────────────────────────────────────────────────────
-var _eraFadeEl = null;
-function _getEraFade() {
-  if (!_eraFadeEl) {
-    _eraFadeEl = document.createElement('div');
-    _eraFadeEl.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:9998;transition:opacity .1s ease';
-    document.body.appendChild(_eraFadeEl);
-  }
-  return _eraFadeEl;
-}
-
 function applyEraTheme(era) {
-  var fade = _getEraFade();
-  fade.style.opacity = '.28';
   var root = document.documentElement;
   var themes = {
     modern:   { bg:'#0d1b2a', surface:'#132540', surface2:'#1c3355', border:'#2c4a6a', borderLt:'#3d6080', muted:'#6a82a0' },
@@ -4535,17 +4530,14 @@ function applyEraTheme(era) {
     deadball: { bg:'#150808', surface:'#1e1010', surface2:'#271616', border:'#3c2020', borderLt:'#502c2c', muted:'#8a5048' }
   };
   var t = themes[era] || themes.modern;
-  setTimeout(function() {
-    document.body.classList.remove('era-modern','era-steroid','era-nostalgia','era-postwar','era-golden','era-deadball');
-    if (era !== 'modern') document.body.classList.add('era-' + era);
-    root.style.setProperty('--bg',        t.bg);
-    root.style.setProperty('--surface',   t.surface);
-    root.style.setProperty('--surface2',  t.surface2);
-    root.style.setProperty('--border',    t.border);
-    root.style.setProperty('--border-lt', t.borderLt);
-    root.style.setProperty('--muted',     t.muted);
-    setTimeout(function() { fade.style.opacity = '0'; }, 30);
-  }, 110);
+  document.body.classList.remove('era-modern','era-steroid','era-nostalgia','era-postwar','era-golden','era-deadball');
+  if (era !== 'modern') document.body.classList.add('era-' + era);
+  root.style.setProperty('--bg',        t.bg);
+  root.style.setProperty('--surface',   t.surface);
+  root.style.setProperty('--surface2',  t.surface2);
+  root.style.setProperty('--border',    t.border);
+  root.style.setProperty('--border-lt', t.borderLt);
+  root.style.setProperty('--muted',     t.muted);
 }
 
 // ─── Era Timeline Slider ─────────────────────────────────────────────────────
