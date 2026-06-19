@@ -4939,6 +4939,7 @@ function renderRoster() {
       {col:'games',lbl:'G'},{col:'ops', lbl:'OPS'},{col:'runs',lbl:'R'},
       {col:'hr',lbl:'HR'},{col:'rbi',lbl:'RBI'},{col:'sb',lbl:'SB'}
     ];
+    if (S.era==='deadball') sortDefs.splice(3, 0, {col:'h3b',lbl:'3B'});
     var sortBar = '<div class="sort-bar">';
     for (var sc = 0; sc < sortDefs.length; sc++) {
       sortBar += '<button class="sort-bar-btn'+(S.sort.col===sortDefs[sc].col?' active':'')+
@@ -4964,7 +4965,8 @@ function renderRoster() {
           + '<span class="pr-stat-pill pr-stat-g" style="background:'+statTint(st.games,SR.g[0],SR.g[1],SR.g[2])+'"><span class="pr-stat-lbl">G</span>'+st.games+'</span>'
           + '<span class="pr-stat-pill pr-stat-ops" style="background:'+statTint((st.obp||0)+(st.slg||0),SR.ops[0],SR.ops[1],SR.ops[2])+'"><span class="pr-stat-lbl">OPS</span>'+fmtSlash((st.obp||0)+(st.slg||0))+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.runs,SR.r[0],SR.r[1],SR.r[2])+'"><span class="pr-stat-lbl">R</span>'+st.runs+'</span>'
-          + '<span class="pr-stat-pill" style="background:'+statTint(S.era==='deadball'?(st.hr+(st.h3b||0)):st.hr,SR.hr[0],SR.hr[1],SR.hr[2])+'"><span class="pr-stat-lbl">'+(S.era==='deadball'?'3B':'HR')+'</span>'+(S.era==='deadball'?(st.hr+(st.h3b||0)):st.hr)+'</span>'
+          + (S.era==='deadball' ? '<span class="pr-stat-pill" style="background:'+statTint(st.h3b||0,SR.hr[0],SR.hr[1],SR.hr[2])+'"><span class="pr-stat-lbl">3B</span>'+(st.h3b||0)+'</span>' : '')
+          + '<span class="pr-stat-pill" style="background:'+statTint(st.hr,SR.hr[0],SR.hr[1],SR.hr[2])+'"><span class="pr-stat-lbl">HR</span>'+st.hr+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.rbi,SR.rbi[0],SR.rbi[1],SR.rbi[2])+'"><span class="pr-stat-lbl">RBI</span>'+st.rbi+'</span>'
           + '<span class="pr-stat-pill" style="background:'+statTint(st.sb,SR.sb[0],SR.sb[1],SR.sb[2])+'"><span class="pr-stat-lbl">SB</span>'+st.sb+'</span>'
           + '</div>')
@@ -4987,7 +4989,8 @@ function renderRoster() {
       + '<th '+thClick('avg')+' class="'+(S.sort.col==='avg'?'sorted':'')+'" style="text-align:right">AVG'+sortArrow('avg')+'</th>'
       + '<th '+thClick('ops')+' class="'+(S.sort.col==='ops'?'sorted':'')+'" style="text-align:right">OPS'+sortArrow('ops')+'</th>'
       + '<th '+thClick('runs')+' class="'+(S.sort.col==='runs'?'sorted':'')+'" style="text-align:right">R'+sortArrow('runs')+'</th>'
-      + '<th '+thClick('hr')+' class="'+(S.sort.col==='hr'?'sorted':'')+'" style="text-align:right">'+(S.era==='deadball'?'3B':'HR')+sortArrow('hr')+'</th>'
+      + (S.era==='deadball' ? '<th '+thClick('h3b')+' class="'+(S.sort.col==='h3b'?'sorted':'')+'" style="text-align:right">3B'+sortArrow('h3b')+'</th>' : '')
+      + '<th '+thClick('hr')+' class="'+(S.sort.col==='hr'?'sorted':'')+'" style="text-align:right">HR'+sortArrow('hr')+'</th>'
       + '<th '+thClick('rbi')+' class="'+(S.sort.col==='rbi'?'sorted':'')+'" style="text-align:right">RBI'+sortArrow('rbi')+'</th>'
       + '<th '+thClick('tb')+' class="'+(S.sort.col==='tb'?'sorted':'')+'" style="text-align:right">TB'+sortArrow('tb')+'</th>'
       + '<th '+thClick('sb')+' class="'+(S.sort.col==='sb'?'sorted':'')+'" style="text-align:right">SB'+sortArrow('sb')+'</th>'
@@ -5007,7 +5010,8 @@ function renderRoster() {
         + '<td class="td-num" style="background:'+statTint(st.avg,SR.avg[0],SR.avg[1],SR.avg[2])+'">'+fmtSlash(st.avg)+'</td>'
         + '<td class="td-num" style="background:'+statTint((st.obp||0)+(st.slg||0),SR.ops[0],SR.ops[1],SR.ops[2])+'">'+fmtSlash((st.obp||0)+(st.slg||0))+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.runs,SR.r[0],SR.r[1],SR.r[2])+'">'+st.runs+'</td>'
-        + '<td class="td-num" style="background:'+statTint(S.era==='deadball'?(st.hr+(st.h3b||0)):st.hr,SR.hr[0],SR.hr[1],SR.hr[2])+'">'+  (S.era==='deadball'?(st.hr+(st.h3b||0)):st.hr)+'</td>'
+        + (S.era==='deadball' ? '<td class="td-num" style="background:'+statTint(st.h3b||0,SR.hr[0],SR.hr[1],SR.hr[2])+'">'+(st.h3b||0)+'</td>' : '')
+        + '<td class="td-num" style="background:'+statTint(st.hr,SR.hr[0],SR.hr[1],SR.hr[2])+'">'+st.hr+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.rbi,SR.rbi[0],SR.rbi[1],SR.rbi[2])+'">'+st.rbi+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.tb,SR.tb[0],SR.tb[1],SR.tb[2])+'">'+st.tb+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.sb,SR.sb[0],SR.sb[1],SR.sb[2])+'">'+st.sb+'</td>'
@@ -5315,7 +5319,7 @@ function showResults() {
         +'<div class="lu-right">'
           
           +'<div class="lu-slash">'+fmtSlash(st.avg)+'/'+fmtSlash(st.obp)+'/'+fmtSlash(st.slg)+'</div>'
-          +'<div class="lu-counts">'+(S.era==='deadball'?Math.round((st.hr||0)+(st.h3b||0)):Math.round(st.hr))+(S.era==='deadball'?'3B':'HR')+' · '+Math.round(st.rbi)+'RBI · '+Math.round(st.runs||0)+'R</div>'
+          +'<div class="lu-counts">'+(S.era==='deadball'?Math.round(st.h3b||0)+'3B · '+Math.round(st.hr||0)+'HR':Math.round(st.hr)+'HR')+' · '+Math.round(st.rbi)+'RBI · '+Math.round(st.runs||0)+'R</div>'
         +'</div>'
       +'</div>';
     }
@@ -5329,7 +5333,7 @@ function showResults() {
       {k:'avg',l:'AVG',tint:function(v){return statTint(v,SR2.avg[0],SR2.avg[1],SR2.avg[2]);},fmt:fmtSlash},
       {k:'ops',l:'OPS',tint:function(v){return statTint(v,SR2.ops[0],SR2.ops[1],SR2.ops[2]);},fmt:fmtSlash},
       {k:'r',  l:'R',  tint:function(v){return statTint(v,SR2.r[0],  SR2.r[1],  SR2.r[2]);},  fmt:function(v){return Math.round(v);}},
-      {k:'hr', l:(S.era==='deadball'?'3B':'HR'), tint:function(v){return statTint(v,SR2.hr[0], SR2.hr[1], SR2.hr[2]);}, fmt:function(v){return Math.round(v);}},
+      {k:'hr', l:(S.era==='deadball'?'HR+3B':'HR'), tint:function(v){return statTint(v,SR2.hr[0], SR2.hr[1], SR2.hr[2]);}, fmt:function(v){return Math.round(v);}},
       {k:'rbi',l:'RBI',tint:function(v){return statTint(v,SR2.rbi[0],SR2.rbi[1],SR2.rbi[2]);},fmt:function(v){return Math.round(v);}},
       {k:'sb', l:'SB', tint:function(v){return statTint(v,SR2.sb[0], SR2.sb[1], SR2.sb[2]);}, fmt:function(v){return Math.round(v);}},
     ];
@@ -5435,19 +5439,26 @@ function showResults() {
   })();
   // ── Leaders ───────────────────────────────────────────────────────────────
   (function() {
-    var cats=[
-      {k:'hr',  l:(S.era==='deadball'?'3B':'HR'), f:function(v){return Math.round(v);}},
-      {k:'rbi', l:'RBI',f:function(v){return Math.round(v);}},
-      {k:'runs',l:'R',  f:function(v){return Math.round(v);}},
-      {k:'avg', l:'AVG',f:fmtSlash},
+    var cats= S.era==='deadball' ? [
+      {k:'hr',  l:'HR',  f:function(v){return Math.round(v);}},
+      {k:'rbi', l:'RBI', f:function(v){return Math.round(v);}},
+      {k:'runs',l:'R',   f:function(v){return Math.round(v);}},
+      {k:'avg', l:'AVG', f:fmtSlash},
+      {k:'h3b', l:'3B',  f:function(v){return Math.round(v);}},
+      {k:'sb',  l:'SB',  f:function(v){return Math.round(v);}},
+    ] : [
+      {k:'hr',  l:'HR',  f:function(v){return Math.round(v);}},
+      {k:'rbi', l:'RBI', f:function(v){return Math.round(v);}},
+      {k:'runs',l:'R',   f:function(v){return Math.round(v);}},
+      {k:'avg', l:'AVG', f:fmtSlash},
       {k:'ops', l:'OPS', f:fmtSlash},
-      {k:'sb',  l:'SB', f:function(v){return Math.round(v);}},
+      {k:'sb',  l:'SB',  f:function(v){return Math.round(v);}},
     ];
     var players=[];
     for(var i=0;i<9;i++){
       var slot=S.lineup[i]; if(!slot) continue;
       var st=slot.player.stats;
-      players.push({name:slot.player.name,pos:POS[i],year:slot.year,hr:S.era==='deadball'?(st.hr+(st.h3b||0)):st.hr,rbi:st.rbi,runs:st.runs||0,avg:st.avg,ops:(st.obp||0)+(st.slg||0),sb:st.sb});
+      players.push({name:slot.player.name,pos:POS[i],year:slot.year,hr:st.hr,h3b:st.h3b||0,rbi:st.rbi,runs:st.runs||0,avg:st.avg,ops:(st.obp||0)+(st.slg||0),sb:st.sb});
     }
     var html='<div class="ld-grid">';
     for(var c=0;c<cats.length;c++){
@@ -5481,12 +5492,12 @@ function showResults() {
       +chip(fmtSlash(a.slg),       'SLG', 'var(--cream)')
       +chip(fmtSlash(a.obp+a.slg), 'OPS', 'var(--cream)')
       +'</div><div class="agg-section-lbl">Totals</div><div class="agg-chips">'
-      +chip(Math.round(a.hr),   S.era==='deadball'?'3B':'HR',  'var(--cream)')
+      +chip(Math.round(a.hr),   S.era==='deadball'?'HR+3B':'HR',  'var(--cream)')
       +chip(Math.round(a.rbi),  'RBI', 'var(--cream)')
       +chip(Math.round(a.runs), 'R',   'var(--cream)')
       +chip(Math.round(a.sb),   'SB',  'var(--cream)')
       +'</div><div class="agg-section-lbl">Per Player</div><div class="agg-chips">'
-      +chip((a.hr/9).toFixed(1),   S.era==='deadball'?'3B':'HR',  'var(--cream)')
+      +chip((a.hr/9).toFixed(1),   S.era==='deadball'?'HR+3B':'HR',  'var(--cream)')
       +chip((a.rbi/9).toFixed(1),  'RBI', 'var(--cream)')
       +chip((a.runs/9).toFixed(1), 'R',   'var(--cream)')
       +chip((a.sb/9).toFixed(1),   'SB',  'var(--cream)')
