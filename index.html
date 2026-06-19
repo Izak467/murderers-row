@@ -4742,10 +4742,12 @@ function buildEraSnap() {
 
   // Scroll → detect centered card → selectEra
   var snap = document.getElementById('era-snap');
-  var scrollTimer;
+  var _escRafPending = false;
   snap.addEventListener('scroll', function() {
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(function() {
+    if (_escRafPending) return;
+    _escRafPending = true;
+    requestAnimationFrame(function() {
+      _escRafPending = false;
       if (_snapScrolling) return;
       var el = document.getElementById('era-snap');
       if (!el) return;
@@ -4763,7 +4765,7 @@ function buildEraSnap() {
       } else if (best) {
         _syncSnapHighlight(best.dataset.era);
       }
-    }, 60);
+    });
   }, {passive: true});
 }
 
