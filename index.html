@@ -1462,12 +1462,12 @@ var ERA_CONFIG = {
 var ERA_SCORING = {
   modern: {
     W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
-    CEIL:  { woba:.378, hr:295, rbi:900, runs:880, sb:200 },
+    CEIL:  { woba:.365, hr:270, rbi:860, runs:840, sb:178 },
     FLOOR: { woba:.285, hr:30,  rbi:450, runs:430, sb:0   }
   },
   steroid: {
-    W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
-    CEIL:  { woba:.400, hr:340, rbi:1050, runs:960, sb:230 },
+    W:     { woba:.50, hr:.20, rbi:.12, runs:.12, sb:.06 },
+    CEIL:  { woba:.376, hr:295, rbi:970, runs:930, sb:110 },
     FLOOR: { woba:.290, hr:35,  rbi:490, runs:460, sb:0   }
   },
   nostalgia: {
@@ -4259,7 +4259,7 @@ function simulate() {
 
   var strength = 0;
   for (var k2 = 0; k2 < keys.length; k2++) strength += norm[keys[k2]] * SC.W[keys[k2]];
-  var wins = Math.min(Math.round(42 + 120 * Math.pow(strength, 2.4)), 162);
+  var wins = Math.min(Math.round(42 + 120 * Math.pow(strength, 2.2)), 162);
   return { wins: wins, strength: strength, norm: norm, agg: agg };
 }
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -4297,7 +4297,7 @@ var _ERA_DESCS = {
   modern:   'Launch angles are optimized, the shift is banned, and every front office has a MIT grad running the numbers. From Pujols to Ohtani, the deepest and most statistically analyzed player pool in history. Build wisely.',
   steroid:  'McGwire hit 70. Sosa hit 66. Bonds hit 73. Nobody in the commissioner\'s office was asking too many questions. The most historically offensive stretch in baseball history — and we mean that both ways.',
   nostalgia:'From the Big Red Machine to the Iron Man. Rickey Henderson stole bases before you could blink, Tony Gwynn made .300 look like a down year, and the stolen base was a legitimate weapon of war. Your dad\'s game at its absolute finest.',
-  postwar: 'The golden age of baseball. Jackie broke the color barrier, Willie Mays made the game look effortless, and Mickey Mantle hit baseballs into orbit. From .406 to 61*, every legend you\'ve ever heard of played right here.'
+  postwar: 'Baseball\'s golden age. Jackie Robinson changed everything in \'47. Willie Mays in center, Mickey Mantle in the Bronx, Hank Aaron in Milwaukee — three all-timers playing the same era at the same time. Maris chased the immortal 60 until he broke it. Every legend you\'ve ever heard of lived right here.'
 };
 
 function selectEra(eraKey) {
