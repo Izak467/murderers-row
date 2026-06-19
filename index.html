@@ -196,7 +196,7 @@ body::before {
 }
 .rules-list li strong { color: var(--cream); }
 .badge-guide { margin: 6px 0 0 2px; padding: 0; }
-.badge-guide li { display: flex; align-items: center; gap: 6px; margin-left: 0; margin-bottom: 3px; font-size: 12px; list-style: none; }
+.badge-guide li { display: flex; align-items: center; gap: 6px; margin-left: 0; margin-bottom: 3px; font-size: 13px; list-style: none; }
 
 .start-btn {
   padding: 15px 40px;
@@ -890,6 +890,8 @@ body::before {
 .era-tab-years { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
 .era-desc-area { padding: 18px 20px 14px; min-height: 80px; }
 .era-desc-text { font-size: 13px; color: var(--cream-dim); line-height: 1.65; }
+.era-desc-note { display: none; font-size: 10px; color: var(--muted); margin-top: 5px; letter-spacing: .2px; }
+body.era-deadball .era-desc-note { display: block; }
 .era-actions {
   display: flex; align-items: center; gap: 12px;
   padding: 0 20px 18px;
@@ -1236,6 +1238,7 @@ body.era-deadball::after {
     <div id="era-slider-wrap"></div>
     <div class="era-desc-area">
       <div class="era-desc-text" id="era-desc-text">Launch angles are optimized, the shift is banned, and every front office has a MIT grad running the numbers. From Pujols to Ohtani, the deepest and most statistically analyzed player pool in history. Build wisely.</div>
+      <div class="era-desc-note">* XBH (2B+3B+HR) replaces HR in scoring for this era</div>
     </div>
     <div class="era-actions">
       <label class="hard-toggle">
@@ -4337,7 +4340,8 @@ var LAHMAN_LOGO = {
   BLA:'bal',                                      // BLA=1901-02 Baltimore AL→became Yankees
   KCA:'oak', LAD:'lad', SFN:'sfg', HOU:'hou',
   NYM:'nym', MIN:'min', LAA:'laa', CAL:'laa',
-  MIL:'mil', KC1:'oak', OAK:'oak', ATL:'atl', LAN:'lad'
+  MIL:'mil', KC1:'oak', OAK:'oak', ATL:'atl', LAN:'lad',
+  NYG:'sfg', SLB:'bal', WSA:'tex', SFG:'sfg'
 };
 
 function getLahmanTeams(year) {
@@ -4360,7 +4364,7 @@ function fetchRosterLahman(year, teamId) {
     return {
       id: p.id,
       name: p.name,
-      positions: p.positions && p.positions.length ? p.positions : ['DH'],
+      positions: (function(ps){ var out=[]; (ps&&ps.length?ps:['DH']).forEach(function(x){ if(x==='OF'){out.push('LF','CF','RF');}else{out.push(x);} }); return out; })(p.positions),
       stats: {
         avg: p.avg, obp: p.obp, slg: p.slg,
         hr: p.hr, rbi: p.rbi, runs: p.r, tb: tb,
@@ -4819,7 +4823,7 @@ var _ERA_DESCS = {
   nostalgia:'From the Big Red Machine to the Iron Man. Rickey Henderson stole bases before you could blink, Tony Gwynn made .300 look like a down year, and the stolen base was a legitimate weapon of war. Your dad\'s game at its absolute finest.',
   postwar: 'Baseball at its most iconic. Jackie Robinson changed everything in \'47. Willie Mays in center, Mickey Mantle in the Bronx, Hank Aaron in Milwaukee — three all-timers playing the same era at the same time. Maris chased the immortal 60 until he broke it. Every legend you\'ve ever heard of lived right here.',
   golden:   'Babe Ruth didn\'t just change baseball — he invented a new sport. The home run went from a novelty to the whole show, and the Bambino hit them farther than anyone thought possible. Lou Gehrig, Rogers Hornsby, Jimmie Foxx — the game\'s first true power era, played in wool and cap.',
-  deadball: 'No one hit home runs. Instead, they stole bases, played inside ball, and scratched out runs one at a time. Ty Cobb hit .420 and started fights at the same time. Honus Wagner was the best player in baseball and nobody could explain exactly how. Pitchers owned the world — until Ruth showed up and ended it all. ★ XBH (extra base hits: 2B+3B+HR) replaces HR in scoring — the ball was too dead for anything else.'
+  deadball: 'No one hit home runs. Instead, they stole bases, played inside ball, and scratched out runs one at a time. Ty Cobb hit .420 and started fights at the same time. Honus Wagner was the best player in baseball and nobody could explain exactly how. Pitchers owned the world — until Ruth showed up and ended it all.'
 };
 
 function selectEra(eraKey) {
