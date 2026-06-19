@@ -1087,7 +1087,7 @@ body.era-deadball::after {
 @media (min-width: 641px) { .era-snap-wrap { display: none; } }
 
 /* ── Era Swipe Carousel ───────────────────────────────────── */
-.era-snap-wrap { padding: 8px 0 6px; }
+.era-snap-wrap { padding: 8px 0 6px; position: relative; }
 .era-snap {
   display: flex; overflow-x: scroll;
   scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
@@ -1125,6 +1125,17 @@ body.era-deadball::after {
 .esc-card-steroid::before { background-image: radial-gradient(rgba(180,130,255,.12) 1.5px,transparent 1.5px); background-size: 16px 16px; background-position: 4px 4px; }
 .esc-card-modern { background: linear-gradient(148deg,#1c3c6c 0%,#102448 60%,#081428 100%); }
 .esc-card-modern::before { background-image: linear-gradient(rgba(100,160,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(100,160,255,.05) 1px,transparent 1px); background-size: 22px 22px; }
+.esc-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 20;
+  background: none; border: none; outline: none; cursor: pointer;
+  color: rgba(255,255,255,.22); font-size: 20px; line-height: 1;
+  padding: 14px 10px; -webkit-tap-highlight-color: transparent;
+  transition: color .18s; user-select: none; -webkit-user-select: none;
+}
+.esc-arrow:hover { color: rgba(255,255,255,.55); }
+.esc-arrow-l { left: 0; }
+.esc-arrow-r { right: 0; }
+.esc-arrow[hidden] { display: none; }
 .era-slider { position: relative; touch-action: none; -webkit-user-select: none; user-select: none; }
 .era-slider-track {
   display: flex; height: 54px; border-radius: 6px; overflow: hidden;
@@ -4680,6 +4691,22 @@ var _SNAP_DATA = [
 ];
 
 var _snapBuilt = false, _snapScrolling = false;
+function _escNavigate(dir) {
+  var idx = 0;
+  for (var i = 0; i < _SNAP_DATA.length; i++) { if (_SNAP_DATA[i].era === _selectedEra) { idx = i; break; } }
+  var next = idx + dir;
+  if (next < 0 || next >= _SNAP_DATA.length) return;
+  selectEra(_SNAP_DATA[next].era);
+}
+
+function _updateEscArrows() {
+  var idx = 0;
+  for (var i = 0; i < _SNAP_DATA.length; i++) { if (_SNAP_DATA[i].era === _selectedEra) { idx = i; break; } }
+  var l = document.querySelector('.esc-arrow-l');
+  var r = document.querySelector('.esc-arrow-r');
+  if (l) { if (idx === 0) l.setAttribute('hidden',''); else l.removeAttribute('hidden'); }
+  if (r) { if (idx === _SNAP_DATA.length - 1) r.setAttribute('hidden',''); else r.removeAttribute('hidden'); }
+}
 
 function buildEraSnap() {
   var wrap = document.getElementById('era-snap-wrap');
@@ -4698,6 +4725,15 @@ function buildEraSnap() {
   }
   html += '</div>';
   wrap.innerHTML = html;
+  var al = document.createElement('button');
+  al.className = 'esc-arrow esc-arrow-l'; al.innerHTML = '«';
+  al.addEventListener('click', function() { _escNavigate(-1); });
+  wrap.appendChild(al);
+  var ar = document.createElement('button');
+  ar.className = 'esc-arrow esc-arrow-r'; ar.innerHTML = '»';
+  ar.addEventListener('click', function() { _escNavigate(1); });
+  wrap.appendChild(ar);
+  _updateEscArrows();
 
   // Scroll to active card without animation
   _syncEraSnap(_selectedEra, false);
@@ -4769,6 +4805,7 @@ function selectEra(eraKey) {
   if (el) el.textContent = _ERA_DESCS[eraKey] || '';
   _updateSliderHandle(eraKey);
   _syncEraSnap(eraKey);
+  _updateEscArrows();
 }
 
 function startSelectedEra() {
