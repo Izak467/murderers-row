@@ -1232,6 +1232,22 @@ body.era-deadball::after {
 .vs-cell-r { text-align: right; }
 .vs-cell-sub { font-size: 10px; color: var(--muted); }
 .vs-pos-lbl { text-align: center; font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
+.vs-note { text-align:center; font-size:10px; color:var(--muted); margin:-4px 0 8px; }
+.batting-order-btn { width:100%; padding:11px 16px; background:transparent; border:1px solid var(--border-lt); color:var(--cream-dim); font-size:13px; font-weight:600; border-radius:8px; cursor:pointer; transition:background .2s; margin-bottom:6px; }
+.batting-order-btn:hover { background:var(--surface2); }
+.bo-grid { display:flex; flex-direction:column; gap:3px; margin-top:4px; }
+.bo-row { display:grid; grid-template-columns:28px 1fr 52px; gap:6px; align-items:center; padding:8px 10px; background:var(--surface); border-radius:7px; border:1px solid var(--border); }
+.bo-num { font-size:14px; font-weight:700; color:var(--gold); text-align:center; font-family:Georgia,serif; }
+.bo-name { font-size:12px; color:var(--cream); font-weight:600; }
+.bo-sub { font-size:10px; color:var(--muted); margin-top:1px; }
+.bo-ops { font-size:13px; font-weight:700; color:var(--cream-dim); text-align:right; }
+@media (max-width:420px) {
+  .vs-row { grid-template-columns:1fr 28px 1fr; gap:2px; padding:6px 6px; }
+  .vs-cell { font-size:11px; }
+  .vs-cell-sub { font-size:9px; }
+  .vs-side-record { font-size:20px; }
+  .bo-row { grid-template-columns:22px 1fr 46px; padding:6px 8px; }
+}
 </style>
 </head>
 <body>
@@ -1477,6 +1493,10 @@ body.era-deadball::after {
 
   <div id="vs-result"></div>
   <div style="padding:10px 0 4px">
+    <div id="batting-order-section" style="margin-bottom:8px">
+      <button class="batting-order-btn" id="batting-order-btn" onclick="toggleBattingOrder()">Suggested Batting Order</button>
+      <div id="batting-order-panel" style="display:none"></div>
+    </div>
     <div id="fl-origins"></div>
   </div>
   <div class="results-btns">
@@ -6290,18 +6310,30 @@ function dismissSharedLineup() {
 (function(){var m=window.location.hash.match(/^#lineup=([A-Za-z0-9\-_]+)$/);if(!m)return;var d=decodeLineup(m[1]);if(d)showSharedLineup(d);})();
 buildEraSlider();
 buildEraSnap();
-</script>
-<script src="lahman_data.js"></script>
-<script src="lahman_awards_data.js"></script>
-<script src="woba_weights.js">
+
 // ─── 1v1 Challenge ────────────────────────────────────────────────────────────
-var _vsChallenge = null;
+var _vsChallenge = null, _vsDuel = null;
+var _ERA_ACCENTS = {deadball:'#8B2030',golden:'#b08820',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
+var _ERA_LBL = {modern:'Modern',steroid:'Juiced',nostalgia:'Hardball',postwar:'Post-War',golden:'Golden Age',deadball:'Dead Ball'};
+
+function _b64enc(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+function _b64dec(s)   { return JSON.parse(decodeURIComponent(escape(atob(s)))); }
+
 (function() {
-  var h = window.location.hash;
-  if (h && h.slice(0,4) === '#vs=') {
-    try { _vsChallenge = JSON.parse(atob(h.slice(4))); } catch(e) {}
-    history.replaceState(null,'',window.location.pathname);
-  }
+  try {
+    var h = window.location.hash;
+    if (!h) return;
+    if (h.slice(0,4) === '#vs=') {
+      var raw = h.slice(4), sep = raw.indexOf('~');
+      if (sep > 0) {
+        _vsDuel = { p1: _b64dec(raw.slice(0,sep)), p2: _b64dec(raw.slice(sep+1)) };
+      } else {
+        _vsChallenge = _b64dec(raw);
+        _vsChallenge._raw = raw;
+      }
+      history.replaceState(null,'',window.location.pathname);
+    }
+  } catch(e) {}
 })();
 
 function _encodeLineup() {
@@ -6311,78 +6343,172 @@ function _encodeLineup() {
     var s = S.lineup[i];
     if (!s) { slots.push(null); continue; }
     var st = s.player.stats;
-    slots.push({ p:POS[i], n:s.player.name, y:s.year, t:s.teamName||'',
-      g:st.games, ab:st.ab, av:+(st.avg||0).toFixed(3),
-      ob:+(st.obp||0).toFixed(3), sl:+(st.slg||0).toFixed(3),
-      hr:st.hr||0, ri:st.rbi||0, r:st.runs||0, sb:st.sb||0 });
+    slots.push({p:POS[i],n:s.player.name,y:s.year,t:s.teamName||'',
+      g:st.games||0,ab:st.ab||0,
+      av:+(st.avg||0).toFixed(3),ob:+(st.obp||0).toFixed(3),sl:+(st.slg||0).toFixed(3),
+      hr:st.hr||0,ri:st.rbi||0,r:st.runs||0,sb:st.sb||0});
   }
-  return btoa(JSON.stringify({ v:1, era:S.era, w:S.lastResult.wins, l:slots }));
+  return _b64enc({v:1,era:S.era,w:S.lastResult.wins,l:slots});
 }
+
+function _copyUrl(url, btnId, doneLabel) {
+  var btn = document.getElementById(btnId);
+  function _done() { if(btn){btn.textContent=doneLabel;setTimeout(function(){btn.textContent=btn.dataset.orig;},2500);} }
+  if(btn) btn.dataset.orig = btn.textContent;
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(_done).catch(function(){_copyFallback(url);_done();});}
+  else{_copyFallback(url);_done();}
+}
+function _copyFallback(t){var a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;opacity:0';document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(a);}
 
 function copyChallenge() {
-  var encoded = _encodeLineup();
-  if (!encoded) return;
-  var url = window.location.origin + window.location.pathname + '#vs=' + encoded;
-  var btn = document.getElementById('challenge-btn');
-  function _done() { if (btn) { btn.textContent = '✓ Link Copied!'; setTimeout(function(){ btn.textContent = '⚔ Challenge a Friend'; },2500); } }
-  if (navigator.clipboard) { navigator.clipboard.writeText(url).then(_done).catch(function(){ _copyFallback(url); _done(); }); }
-  else { _copyFallback(url); _done(); }
+  var enc = _encodeLineup(); if(!enc) return;
+  localStorage.setItem('mr-vs-raw', enc);
+  _copyUrl(window.location.origin+window.location.pathname+'#vs='+enc,'challenge-btn','✓ Link Copied!');
 }
-function _copyFallback(text) {
-  var ta = document.createElement('textarea');
-  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
-  document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch(e) {}
-  document.body.removeChild(ta);
+function copyResultBack() {
+  if(!_vsChallenge||!_vsChallenge._raw) return;
+  var myEnc = _encodeLineup(); if(!myEnc) return;
+  _copyUrl(window.location.origin+window.location.pathname+'#vs='+_vsChallenge._raw+'~'+myEnc,'result-back-btn','✓ Copied!');
 }
 
-function _fmtOps(v) { return v ? (+v).toFixed(3) : '—'; }
+function _fmtOps(v){ return v ? (+v).toFixed(3) : '—'; }
+
+function _vsRows(mySlots, theirSlots, myDecoded) {
+  var rows = '';
+  for (var i = 0; i < 9; i++) {
+    var ms = mySlots[i], ts = theirSlots ? theirSlots[i] : null;
+    var mo = ms ? (myDecoded?(+(ms.ob||0)++(ms.sl||0)):(+(ms.player.stats.obp||0)++(ms.player.stats.slg||0))) : 0;
+    var to = ts ? (+(ts.ob||0)++(ts.sl||0)) : 0;
+    var cls = mo>to?'you-win':to>mo?'they-win':'';
+    var mn = ms?(myDecoded?esc(ms.n):esc(ms.player.name)):'&mdash;', my = ms?(myDecoded?ms.y:ms.year):'';
+    var tn = ts?esc(ts.n):'&mdash;', ty = ts?ts.y:'';
+    rows += '<div class="vs-row '+cls+'">'
+      +'<div class="vs-cell'+(mo>=to&&mo?' w':'')+'">'+mn+'<div class="vs-cell-sub">'+my+(my?' &middot; ':'')+_fmtOps(mo)+'</div></div>'
+      +'<div class="vs-pos-lbl">'+POS[i]+'</div>'
+      +'<div class="vs-cell vs-cell-r'+(to>mo?' w':'')+'">'+tn+'<div class="vs-cell-sub">'+_fmtOps(to)+(ty?' &middot; ':'')+ty+'</div></div>'
+      +'</div>';
+  }
+  return rows;
+}
+function _vsHeader(youW,youL,youEra,themW,themL,themEra,youLbl,themLbl) {
+  var win=youW>themW,tied=youW===themW;
+  var msg=tied?'Dead even — it would go to extras':win?'🏆 '+youLbl+' wins!':'🏆 '+themLbl+' wins!';
+  return '<div class="vs-header">'
+    +'<div class="vs-side"><div class="vs-side-label">'+youLbl+'</div>'
+    +'<div class="vs-side-record">'+youW+'&ndash;'+youL+'</div>'
+    +'<div class="vs-side-era">'+(_ERA_LBL[youEra]||youEra)+'</div></div>'
+    +'<div class="vs-divider">VS</div>'
+    +'<div class="vs-side"><div class="vs-side-label">'+themLbl+'</div>'
+    +'<div class="vs-side-record">'+themW+'&ndash;'+themL+'</div>'
+    +'<div class="vs-side-era">'+(_ERA_LBL[themEra]||themEra||'?')+'</div></div>'
+    +'</div><div class="vs-outcome">'+msg+'</div>';
+}
 
 function _renderVsResult() {
   var el = document.getElementById('vs-result');
   var btn = document.getElementById('challenge-btn');
   if (btn) btn.style.display = '';
   if (!el) return;
-  if (!_vsChallenge) { el.innerHTML = ''; return; }
-  var them = _vsChallenge;
-  var myW = S.lastResult ? S.lastResult.wins : 0, myL = 162 - myW;
-  var thW = them.w || 0, thL = 162 - thW;
-  var eraLbl = { modern:'Modern', steroid:'Juiced', nostalgia:'Hardball', postwar:'Post-War', golden:'Golden Age', deadball:'Dead Ball' };
-  var youWin = myW > thW, tied = myW === thW;
-  var outcome = tied ? 'Dead even — it would go to extras'
-    : youWin ? '🏆 You win the series!' : '⚔ Challenger wins the series';
 
-  var rows = '';
-  for (var i = 0; i < 9; i++) {
-    var ms = S.lineup[i], ts = them.l ? them.l[i] : null;
-    var mops = ms ? (+(ms.player.stats.obp||0) + +(ms.player.stats.slg||0)) : 0;
-    var tops = ts ? ((+ts.ob||0) + (+ts.sl||0)) : 0;
-    var cls = mops > tops ? 'you-win' : tops > mops ? 'they-win' : '';
-    var mn = ms ? esc(ms.player.name) : '&mdash;', my = ms ? ms.year : '';
-    var tn = ts ? esc(ts.n) : '&mdash;', ty = ts ? ts.y : '';
-    rows += '<div class="vs-row ' + cls + '">'
-      + '<div class="vs-cell' + (mops >= tops && mops ? ' w' : '') + '">' + mn
-      + '<div class="vs-cell-sub">' + my + (my ? ' &middot; ' : '') + _fmtOps(mops) + '</div></div>'
-      + '<div class="vs-pos-lbl">' + POS[i] + '</div>'
-      + '<div class="vs-cell vs-cell-r' + (tops > mops ? ' w' : '') + '">' + tn
-      + '<div class="vs-cell-sub">' + _fmtOps(tops) + (ty ? ' &middot; ' : '') + ty + '</div></div>'
-      + '</div>';
+  if (_vsDuel) {
+    var p1=_vsDuel.p1, p2=_vsDuel.p2;
+    el.innerHTML='<div class="card vs-section">'
+      +'<div class="res-divider">Full Matchup</div>'
+      +_vsHeader(p1.w,162-p1.w,p1.era,p2.w,162-p2.w,p2.era,'Player 1','Player 2')
+      +'<div class="vs-note">OPS shown — eras differ, wins record is the fair judge</div>'
+      +'<div class="vs-grid">'+_vsRows(p1.l,p2.l,true)+'</div>'
+      +'</div>';
+    return;
   }
+  if (!_vsChallenge) { el.innerHTML=''; return; }
 
-  el.innerHTML = '<div class="card vs-section">'
-    + '<div class="res-divider">Head-to-Head</div>'
-    + '<div class="vs-header">'
-    + '<div class="vs-side"><div class="vs-side-label">You</div>'
-    + '<div class="vs-side-record">' + myW + '–' + myL + '</div>'
-    + '<div class="vs-side-era">' + (eraLbl[S.era]||S.era) + '</div></div>'
-    + '<div class="vs-divider">VS</div>'
-    + '<div class="vs-side"><div class="vs-side-label">Challenger</div>'
-    + '<div class="vs-side-record">' + thW + '–' + thL + '</div>'
-    + '<div class="vs-side-era">' + (eraLbl[them.era]||them.era||'?') + '</div></div>'
-    + '</div>'
-    + '<div class="vs-outcome">' + outcome + '</div>'
-    + '<div class="vs-grid">' + rows + '</div>'
-    + '</div>';
+  var myW=S.lastResult?S.lastResult.wins:0;
+  var accent=_ERA_ACCENTS[_vsChallenge.era]||'var(--border)';
+  el.innerHTML='<div class="card vs-section" style="border-left:3px solid '+accent+'">'
+    +'<div class="res-divider">Head-to-Head</div>'
+    +_vsHeader(myW,162-myW,S.era,_vsChallenge.w,162-_vsChallenge.w,_vsChallenge.era,'You','Challenger')
+    +'<div class="vs-note">OPS shown — era differences may apply</div>'
+    +'<div class="vs-grid">'+_vsRows(S.lineup,_vsChallenge.l,false)+'</div>'
+    +'<div style="text-align:center;margin-top:10px">'
+    +'<button class="challenge-btn" id="result-back-btn" onclick="copyResultBack()" style="font-size:12px;padding:8px 16px">📤 Share with Challenger</button>'
+    +'</div></div>';
+}
+
+function _showVsBanner() {
+  var el = document.getElementById('vs-banner');
+  var sub = document.getElementById('vs-banner-sub');
+  if (!el) return;
+  if (_vsChallenge) {
+    var acc = _ERA_ACCENTS[_vsChallenge.era]||'var(--gold)';
+    el.style.display='';
+    el.style.borderColor = acc;
+    var _hx=acc.replace('#',''); el.style.background='rgba('+parseInt(_hx.slice(0,2),16)+','+parseInt(_hx.slice(2,4),16)+','+parseInt(_hx.slice(4,6),16)+',0.1)';
+    if(sub) sub.textContent='Challenger played ' + (_ERA_LBL[_vsChallenge.era]||_vsChallenge.era) + ' era · ' + _vsChallenge.w + '–66 wins. Beat them!';
+  } else if (_vsDuel) {
+    el.style.display='';
+    if(sub) sub.textContent='Duel result loaded — finish your game to see the matchup, or view below.';
+    _renderVsResult();
+  } else {
+    el.style.display='none';
+  }
+}
+
+// ─── Batting Order ────────────────────────────────────────────────────────────
+function generateBattingOrder() {
+  var pool = [];
+  for (var i = 0; i < 9; i++) {
+    var s = S.lineup[i]; if(!s) continue;
+    var st = s.player.stats;
+    var ob=+(st.obp||0), sl=+(st.slg||0), hr=+(st.hr||0), sb=+(st.sb||0), ri=+(st.rbi||0);
+    pool.push({ idx:i, pos:POS[i], name:s.player.name, year:s.year, team:s.teamName||'',
+      ob:ob, sl:sl, ops:ob+sl, hr:hr, sb:sb, ri:ri, avg:+(st.avg||0) });
+  }
+  var order=[], rem=pool.slice();
+  function take(fn){ rem.sort(function(a,b){return fn(b)-fn(a);}); var p=rem.shift(); order.push(p); return p; }
+  // Priority: 3-hole (best OPS), Cleanup (power), Leadoff (OBP+speed), 2-hole, 5-hole, then rest by OPS
+  take(function(p){return p.ops;});                                         // 3: best OPS
+  take(function(p){return p.sl*0.55+Math.min(p.hr/50,1)*0.35+Math.min(p.ri/130,1)*0.10;}); // 4: cleanup
+  take(function(p){return p.ob*0.60+Math.min(p.sb/60,1)*0.30+p.avg*0.10;}); // 1: leadoff
+  // reorder: leadoff goes to front, shift 3 and 4 back
+  order = [order[2], order[0], order[1], order[3]];
+  take(function(p){return p.ob*0.45+p.ops*0.35+Math.min(p.sb/40,1)*0.20;}); // 2: two-hole
+  order = [order[0], order[4], order[1], order[2], order[3]];
+  take(function(p){return p.sl*0.45+p.ops*0.35+Math.min(p.ri/110,1)*0.20;}); // 5: five-hole
+  order.push(order.pop()); // 5 already appended
+  rem.sort(function(a,b){return b.ops-a.ops;});
+  while(rem.length) order.push(rem.shift());
+  return order;
+}
+
+var _battingOrderVisible = false;
+function toggleBattingOrder() {
+  _battingOrderVisible = !_battingOrderVisible;
+  var panel = document.getElementById('batting-order-panel');
+  var btn   = document.getElementById('batting-order-btn');
+  if (!panel) return;
+  if (_battingOrderVisible) {
+    var bo = generateBattingOrder();
+    var html = '<div class="bo-grid">';
+    for (var i = 0; i < bo.length; i++) {
+      var p = bo[i];
+      html += '<div class="bo-row">'
+        +'<div class="bo-num">'+(i+1)+'</div>'
+        +'<div class="bo-name">'+esc(p.name)+'<div class="bo-sub">'+p.pos+' &middot; '+p.year+'</div></div>'
+        +'<div class="bo-ops">'+p.ops.toFixed(3)+'<div class="bo-sub">OPS</div></div>'
+        +'</div>';
+    }
+    html += '</div>';
+    panel.innerHTML = html;
+    panel.style.display='';
+    if(btn) btn.textContent='Hide Batting Order';
+  } else {
+    panel.style.display='none';
+    if(btn) btn.textContent='Suggested Batting Order';
+  }
 }
 </script>
+<script src="lahman_data.js"></script>
+<script src="lahman_awards_data.js"></script>
+<script src="woba_weights.js"></script>
 </body>
 </html>
