@@ -4948,7 +4948,7 @@ function assignPlayer(player, posIdx) {
   S.lineup[posIdx] = {
     player: player, year: yr, teamName: S.spin.teamName,
     awards: {
-      mvp: eraCfg.showMVP ? ((ad.mvpWinners && ad.mvpWinners[player.id]) ? 1 : getMvpRank(player.name, yr)) : 0,
+      mvp: eraCfg.showMVP ? ((ad.mvpWinners && ad.mvpWinners[player.id]) || getMvpRank(player.name, yr)) : 0,
       roy: !!(eraCfg.showROY && ad.roys && ad.roys[player.id]),
       ss:  !!(eraCfg.showSS  && yr >= (eraCfg.ssSince || 0) && ad.silverSluggers && ad.silverSluggers[player.id]),
       asg: !!(eraCfg.showASG && ((ad.allStars && ad.allStars[player.id]) || NOSTALGIA_ALLSTARS[player.name+'|'+yr] || STEROID_ALLSTARS[player.name+'|'+yr])),
