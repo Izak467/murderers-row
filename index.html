@@ -5557,10 +5557,10 @@ function renderRoster() {
       + '<th '+thClick('games')+' class="'+(S.sort.col==='games'?'sorted':'')+'" style="text-align:right">G'+sortArrow('games')+'</th>'
       + '<th '+thClick('avg')+' class="'+(S.sort.col==='avg'?'sorted':'')+'" style="text-align:right">AVG'+sortArrow('avg')+'</th>'
       + '<th '+thClick('ops')+' class="'+(S.sort.col==='ops'?'sorted':'')+'" style="text-align:right">OPS'+sortArrow('ops')+'</th>'
+      + '<th '+thClick('tb')+' class="'+(S.sort.col==='tb'?'sorted':'')+'" style="text-align:right">TB'+sortArrow('tb')+'</th>'
       + '<th '+thClick('runs')+' class="'+(S.sort.col==='runs'?'sorted':'')+'" style="text-align:right">R'+sortArrow('runs')+'</th>'
       + '<th '+thClick(S.era==='deadball'?'xbh':'hr')+' class="'+(S.sort.col===(S.era==='deadball'?'xbh':'hr')?'sorted':'')+'" style="text-align:right">'+(S.era==='deadball'?'XBH':'HR')+sortArrow(S.era==='deadball'?'xbh':'hr')+'</th>'
       + '<th '+thClick('rbi')+' class="'+(S.sort.col==='rbi'?'sorted':'')+'" style="text-align:right">RBI'+sortArrow('rbi')+'</th>'
-      + '<th '+thClick('tb')+' class="'+(S.sort.col==='tb'?'sorted':'')+'" style="text-align:right">TB'+sortArrow('tb')+'</th>'
       + '<th '+thClick('sb')+' class="'+(S.sort.col==='sb'?'sorted':'')+'" style="text-align:right">SB'+sortArrow('sb')+'</th>'
       + '<th>Assign To</th>'
       + '</tr></thead>';
@@ -5577,10 +5577,10 @@ function renderRoster() {
         + '<td class="td-num" style="background:'+statTint(st.games,SR.g[0],SR.g[1],SR.g[2])+'">'+st.games+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.avg,SR.avg[0],SR.avg[1],SR.avg[2])+'">'+fmtSlash(st.avg)+'</td>'
         + '<td class="td-num" style="background:'+statTint((st.obp||0)+(st.slg||0),SR.ops[0],SR.ops[1],SR.ops[2])+'">'+fmtSlash((st.obp||0)+(st.slg||0))+'</td>'
+        + '<td class="td-num" style="background:'+statTint(st.tb,SR.tb[0],SR.tb[1],SR.tb[2])+'">'+st.tb+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.runs,SR.r[0],SR.r[1],SR.r[2])+'">'+st.runs+'</td>'
         + '<td class="td-num" style="background:'+statTint(S.era==='deadball'?((st.hr||0)+(st.h2b||0)+(st.h3b||0)):st.hr,SR.hr[0],SR.hr[1],SR.hr[2])+'">'+  (S.era==='deadball'?(st.hr||0)+(st.h2b||0)+(st.h3b||0):st.hr)+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.rbi,SR.rbi[0],SR.rbi[1],SR.rbi[2])+'">'+st.rbi+'</td>'
-        + '<td class="td-num" style="background:'+statTint(st.tb,SR.tb[0],SR.tb[1],SR.tb[2])+'">'+st.tb+'</td>'
         + '<td class="td-num" style="background:'+statTint(st.sb,SR.sb[0],SR.sb[1],SR.sb[2])+'">'+st.sb+'</td>'
         + '<td class="td-pos">'+btnHtml+'</td>'
         + '</tr>';
@@ -5918,14 +5918,24 @@ function showResults() {
   // ── Matrix (heat map) ────────────────────────────────────────────────────
   (function() {
     var SR2 = getStatRanges(S.era||'modern', S.spin ? S.spin.year : 2024);
+    var _desktop = window.innerWidth > 640;
     var cols = [
       {k:'avg',l:'AVG',tint:function(v){return statTint(v,SR2.avg[0],SR2.avg[1],SR2.avg[2]);},fmt:fmtSlash},
-      {k:'ops',l:'OPS',tint:function(v){return statTint(v,SR2.ops[0],SR2.ops[1],SR2.ops[2]);},fmt:fmtSlash},
+    ];
+    if (_desktop) {
+      cols.push({k:'obp',l:'OBP',tint:function(v){return statTint(v,SR2.obp[0],SR2.obp[1],SR2.obp[2]);},fmt:fmtSlash});
+      cols.push({k:'slg',l:'SLG',tint:function(v){return statTint(v,SR2.slg[0],SR2.slg[1],SR2.slg[2]);},fmt:fmtSlash});
+    }
+    cols.push({k:'ops',l:'OPS',tint:function(v){return statTint(v,SR2.ops[0],SR2.ops[1],SR2.ops[2]);},fmt:fmtSlash});
+    if (_desktop) {
+      cols.push({k:'tb',l:'TB',tint:function(v){return statTint(v,SR2.tb[0],SR2.tb[1],SR2.tb[2]);},fmt:function(v){return Math.round(v);}});
+    }
+    cols.push(
       {k:'r',  l:'R',  tint:function(v){return statTint(v,SR2.r[0],  SR2.r[1],  SR2.r[2]);},  fmt:function(v){return Math.round(v);}},
       {k:'hr', l:(S.era==='deadball'?'XBH':'HR'), tint:function(v){return statTint(v,SR2.hr[0], SR2.hr[1], SR2.hr[2]);}, fmt:function(v){return Math.round(v);}},
       {k:'rbi',l:'RBI',tint:function(v){return statTint(v,SR2.rbi[0],SR2.rbi[1],SR2.rbi[2]);},fmt:function(v){return Math.round(v);}},
-      {k:'sb', l:'SB', tint:function(v){return statTint(v,SR2.sb[0], SR2.sb[1], SR2.sb[2]);}, fmt:function(v){return Math.round(v);}},
-    ];
+      {k:'sb', l:'SB', tint:function(v){return statTint(v,SR2.sb[0], SR2.sb[1], SR2.sb[2]);}, fmt:function(v){return Math.round(v);}}
+    );
     var html = '<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-th-row"></th>';
     for (var c=0;c<cols.length;c++) html += '<th class="hm-th">'+cols[c].l+'</th>';
     html += '</tr></thead><tbody>';
@@ -5936,7 +5946,7 @@ function showResults() {
       html += '<tr><td class="hm-th-row"><span class="hm-pos">'+slotLabel(POS[i])+'</span> '+esc(last)+'</td>';
       for (var c=0;c<cols.length;c++) {
         var col=cols[c];
-        var val=col.k==='r'?(st.runs||0):col.k==='ops'?((st.obp||0)+(st.slg||0)):col.k==='hr'&&S.era==='deadball'?((st.hr||0)+(st.h2b||0)+(st.h3b||0)):(st[col.k]||0);
+        var val=col.k==='r'?(st.runs||0):col.k==='ops'?((st.obp||0)+(st.slg||0)):col.k==='hr'&&S.era==='deadball'?((st.hr||0)+(st.h2b||0)+(st.h3b||0)):col.k==='obp'?(st.obp||0):col.k==='slg'?(st.slg||0):col.k==='tb'?(st.tb||0):(st[col.k]||0);
         html += '<td class="hm-cell-wrap"><div class="hm-cell" style="background:'+col.tint(val)+'">'+col.fmt(val)+'</div></td>';
       }
       html += '</tr>';
