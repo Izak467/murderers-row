@@ -6063,8 +6063,7 @@ function showScreen(name) {
     selectEra(_selectedEra || 'modern');
     renderHistory();
     requestAnimationFrame(function() { _syncEraSnap(_selectedEra || 'modern', false); });
-    var _vsBanEl = document.getElementById('vs-banner');
-    if (_vsBanEl) _vsBanEl.style.display = _vsChallenge ? '' : 'none';
+    _showVsBanner();
   }
 }
 
@@ -6335,6 +6334,8 @@ function _b64dec(s)   { return JSON.parse(decodeURIComponent(escape(atob(s)))); 
     }
   } catch(e) {}
 })();
+// show banner on initial page load if arriving via challenge/duel URL
+window.addEventListener('DOMContentLoaded', function() { _showVsBanner(); });
 
 function _encodeLineup() {
   if (!S.lastResult) return null;
