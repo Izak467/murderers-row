@@ -118,6 +118,38 @@
     var snap = await getDoc(doc(db, 'users', window._fbUid));
     return snap.exists() ? snap.data() : { pb: 0, streak: 0 };
   };
+
+  // ── 1v1 Challenge storage ────────────────────────────────────
+  function _genId() {
+    var id = '';
+    var chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    for (var i = 0; i < 7; i++) id += chars[Math.floor(Math.random() * chars.length)];
+    return id;
+  }
+
+  window._fbSaveChallenge = async function(data) {
+    var id = _genId();
+    var ref = doc(db, 'challenges', id);
+    await setDoc(ref, {
+      era: data.era,
+      wins: data.wins,
+      slots: data.slots,
+      uid: window._fbUid || null,
+      ts: Date.now(),
+      p2wins: null, p2era: null, p2slots: null, p2uid: null, p2ts: null
+    });
+    return id;
+  };
+
+  window._fbGetChallenge = async function(id) {
+    var snap = await getDoc(doc(db, 'challenges', id));
+    return snap.exists() ? Object.assign({ id: snap.id }, snap.data()) : null;
+  };
+
+  window._fbRespondChallenge = async function(id, p2data) {
+    var ref = doc(db, 'challenges', id);
+    await setDoc(ref, p2data, { merge: true });
+  };
 </script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1280,6 +1312,10 @@ body.era-deadball::after {
 .vs-cell-sub { font-size: 10px; color: var(--muted); }
 .vs-pos-lbl { text-align: center; font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
 .vs-note { text-align:center; font-size:10px; color:var(--muted); margin:-4px 0 8px; }
+.vs-outcome-banner { text-align:center; font-size:18px; font-weight:800; padding:12px 0 4px; letter-spacing:0.3px; }
+.vs-outcome-banner.you { color:#4caf80; }
+.vs-outcome-banner.they { color:#f08080; }
+.vs-outcome-banner.tie { color:var(--gold); }
 .batting-order-btn { width:100%; padding:11px 16px; background:transparent; border:1px solid var(--border-lt); color:var(--cream-dim); font-size:13px; font-weight:600; border-radius:8px; cursor:pointer; transition:background .2s; margin-bottom:6px; }
 .batting-order-btn:hover { background:var(--surface2); }
 .bo-grid { display:flex; flex-direction:column; gap:3px; margin-top:4px; }
@@ -1590,7 +1626,7 @@ body.era-deadball::after {
 <div id="fl-origins"></div>
   </div>
   <div class="results-btns">
-    <button class="challenge-btn" id="challenge-btn" onclick="shareChallenge()" style="display:none">&#x2694; Challenge a Friend</button>
+    <button class="challenge-btn" id="challenge-btn" onclick="shareChallenge()" style="display:none">&#x2694; Challenge</button>
     <button class="play-again-btn" onclick="resetGame()">Play Again</button>
     <button class="share-btn" onclick="shareScore()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.258 5.63 5.906-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -5890,6 +5926,18 @@ function showResults() {
   document.getElementById('hard-mode-badge').style.display = S.hardMode ? 'block' : 'none';
   var vsBadgeEl = document.getElementById('vs-mode-badge');
   if (vsBadgeEl) vsBadgeEl.style.display = S.vsMode ? 'inline-flex' : 'none';
+  var chalBtn = document.getElementById('challenge-btn');
+  if (chalBtn) {
+    if (S.vsMode && !_vsChallenge) {
+      chalBtn.style.display = '';
+      chalBtn.textContent = '\u2694 Challenge a Friend';
+      chalBtn.style.background = 'rgba(80,180,200,0.15)';
+      chalBtn.style.borderColor = 'rgba(80,180,200,0.5)';
+      chalBtn.style.color = '#50b4c8';
+    } else if (!_vsChallenge && !_vsDuel) {
+      chalBtn.style.display = '';
+    }
+  }
   var eraBadgeEl = document.getElementById('era-badge');
   if (eraBadgeEl) {
     var eraCfgR = ERA_CONFIG[S.era || 'modern'];
@@ -6472,7 +6520,7 @@ buildEraSlider();
 buildEraSnap();
 
 // ─── 1v1 Challenge ────────────────────────────────────────────────────────────
-var _vsChallenge = null, _vsDuel = null;
+var _vsChallenge = null, _vsDuel = null, _vsChallengeId = null;
 var _ERA_ACCENTS = {deadball:'#8B2030',golden:'#b08820',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
 var _ERA_LBL = {modern:'Modern',steroid:'Juiced',nostalgia:'Hardball',postwar:'Post-War',golden:'Golden Age',deadball:'Dead Ball'};
 
@@ -6482,36 +6530,61 @@ function _b64dec(s)   { return JSON.parse(decodeURIComponent(escape(atob(s)))); 
 (function() {
   try {
     var h = window.location.hash;
-    if (!h) return;
-    if (h.slice(0,4) === '#vs=') {
-      var raw = h.slice(4), sep = raw.indexOf('~');
-      if (sep > 0) {
-        _vsDuel = { p1: _b64dec(raw.slice(0,sep)), p2: _b64dec(raw.slice(sep+1)) };
-      } else {
-        _vsChallenge = _b64dec(raw);
-        _vsChallenge._raw = raw;
-      }
-      _checkDuelResponse(raw);
-      history.replaceState(null,'',window.location.pathname);
+    if (!h || h.slice(0,4) !== '#vs=') return;
+    var raw = h.slice(4);
+    history.replaceState(null,'',window.location.pathname);
+    var sep = raw.indexOf('~');
+    if (sep > 0) {
+      // Legacy base64 duel A~B
+      try { _vsDuel = { p1: _b64dec(raw.slice(0,sep)), p2: _b64dec(raw.slice(sep+1)) }; } catch(e) {}
+    } else if (raw.length <= 12) {
+      // Firebase short ID — fetch async after DOM ready
+      _vsChallengeId = raw;
+    } else {
+      // Legacy base64 challenge
+      try { _vsChallenge = _b64dec(raw); _vsChallenge._raw = raw; } catch(e) {}
     }
   } catch(e) {}
 })();
-// show banner on initial page load if arriving via challenge/duel URL
-window.addEventListener('DOMContentLoaded', function() { _showVsBanner(); _renderVsHub(); });
 
-function _encodeLineup() {
+function _loadFirebaseChallenge(id) {
+  if (!window._fbGetChallenge) { setTimeout(function(){ _loadFirebaseChallenge(id); }, 200); return; }
+  window._fbGetChallenge(id).then(function(data) {
+    if (!data) { _showVsBanner(); _renderVsHub(); return; }
+    if (data.p2wins !== null && data.p2slots) {
+      _vsDuel = { p1:{era:data.era,w:data.wins,l:data.slots}, p2:{era:data.p2era,w:data.p2wins,l:data.p2slots} };
+    } else {
+      _vsChallenge = { era:data.era, w:data.wins, l:data.slots, _id:id, _uid:data.uid };
+    }
+    _showVsBanner(); _renderVsHub();
+  }).catch(function() { _showVsBanner(); _renderVsHub(); });
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  if (_vsChallengeId && !_vsChallenge && !_vsDuel) {
+    _loadFirebaseChallenge(_vsChallengeId);
+  } else {
+    if (_vsChallenge && _vsChallenge._raw) _checkDuelResponse(_vsChallenge._raw);
+    _showVsBanner(); _renderVsHub();
+  }
+});
+
+function _buildChallengeData() {
   if (!S.lastResult) return null;
   var slots = [];
   for (var i = 0; i < 9; i++) {
     var s = S.lineup[i];
     if (!s) { slots.push(null); continue; }
     var st = s.player.stats;
-    slots.push({p:POS[i],n:s.player.name,y:s.year,t:s.teamName||'',
-      g:st.games||0,ab:st.ab||0,
+    slots.push({p:slotLabel(POS[i]),n:s.player.name,y:s.year,
       av:+(st.avg||0).toFixed(3),ob:+(st.obp||0).toFixed(3),sl:+(st.slg||0).toFixed(3),
       hr:st.hr||0,ri:st.rbi||0,r:st.runs||0,sb:st.sb||0});
   }
-  return _b64enc({v:1,era:S.era,w:S.lastResult.wins,l:slots});
+  return {era:S.era, wins:S.lastResult.wins, slots:slots};
+}
+function _encodeLineup() {
+  var d = _buildChallengeData(); if (!d) return null;
+  return _b64enc({v:1,era:d.era,w:d.wins,l:d.slots});
 }
 
 function _copyUrl(url, btnId, doneLabel) {
@@ -6534,25 +6607,62 @@ function copyResultBack() {
   _copyUrl(window.location.origin+window.location.pathname+'#vs='+_vsChallenge._raw+'~'+myEnc,'result-back-btn','✓ Copied!');
 }
 
+function respondToChallenge() {
+  if (!_vsChallenge || !_vsChallenge._id) { copyResultBack(); return; }
+  var data = _buildChallengeData(); if (!data) return;
+  var id = _vsChallenge._id;
+  var btn = document.getElementById('result-back-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+  var uid = window._fbUid || null;
+  if (uid && uid === _vsChallenge._uid) {
+    if (btn) { btn.disabled=false; btn.textContent='Can\'t respond to your own challenge!'; setTimeout(function(){if(btn){btn.disabled=false;btn.textContent='Submit Response';}},2500); }
+    return;
+  }
+  window._fbRespondChallenge(id, {p2wins:data.wins,p2era:data.era,p2slots:data.slots,p2uid:uid,p2ts:Date.now()}).then(function() {
+    _vsDuel = { p1:{era:_vsChallenge.era,w:_vsChallenge.w,l:_vsChallenge.l}, p2:{era:data.era,w:data.wins,l:data.slots} };
+    _vsChallenge = null;
+    if (btn) { btn.disabled=false; btn.textContent='Submit Response'; }
+    _renderVsResult();
+    _showVsBanner();
+    var url = window.location.origin+window.location.pathname+'#vs='+id;
+    var text = 'I responded to your Murderers\u2019 Row challenge! Check the result:';
+    if (navigator.share) {
+      navigator.share({title:"Murderers\u2019 Row Result",text:text,url:url}).catch(function(){});
+    } else {
+      _copyFallback(url);
+    }
+  }).catch(function(e) {
+    console.error(e);
+    if (btn) { btn.disabled=false; btn.textContent='Error — retry'; setTimeout(function(){if(btn)btn.textContent='Submit Response';},2500); }
+  });
+}
+
 function _fmtOps(v){ return v ? (+v).toFixed(3) : '—'; }
 
-function _vsRows(mySlots, theirSlots, myDecoded) {
+function _vsRows(mySlots, theirSlots, myDecoded, myEra, theirEra) {
   var rows = '';
+  var lahmanEras = {deadball:1,golden:1,postwar:1,nostalgia:1};
   for (var i = 0; i < 9; i++) {
     var ms = mySlots[i], ts = theirSlots ? theirSlots[i] : null;
     var mo = ms ? (myDecoded?(+(ms.ob||0) + +(ms.sl||0)):(+(ms.player.stats.obp||0) + +(ms.player.stats.slg||0))) : 0;
     var to = ts ? (+(ts.ob||0) + +(ts.sl||0)) : 0;
     var cls = mo>to?'you-win':to>mo?'they-win':'';
-    var mn = ms?(myDecoded?esc(ms.n):esc(ms.player.name)):'&mdash;', my = ms?(myDecoded?ms.y:ms.year):'';
-    var tn = ts?esc(ts.n):'&mdash;', ty = ts?ts.y:'';
+    var mn = ms?(myDecoded?esc(ms.n):esc(ms.player.name)):'&mdash;';
+    var mhr = ms?(myDecoded?(ms.hr||0):(ms.player.stats.hr||0)):0;
+    var thr = ts?(ts.hr||0):0;
+    var tn = ts?esc(ts.n):'&mdash;';
+    var rawPos = ms?(myDecoded?(ms.p||POS[i]):POS[i]):POS[i];
+    var useEra = myEra || S.era;
+    var posLbl = (lahmanEras[useEra] && (rawPos==='LF'||rawPos==='CF'||rawPos==='RF')) ? 'OF' : rawPos;
     rows += '<div class="vs-row '+cls+'">'
-      +'<div class="vs-cell'+(mo>=to&&mo?' w':'')+'">'+mn+'<div class="vs-cell-sub">'+my+(my?' &middot; ':'')+_fmtOps(mo)+'</div></div>'
-      +'<div class="vs-pos-lbl">'+POS[i]+'</div>'
-      +'<div class="vs-cell vs-cell-r'+(to>mo?' w':'')+'">'+tn+'<div class="vs-cell-sub">'+_fmtOps(to)+(ty?' &middot; ':'')+ty+'</div></div>'
+      +'<div class="vs-cell'+(mo>=to&&mo?' w':'')+'">'+mn+'<div class="vs-cell-sub">'+_fmtOps(mo)+(mhr?' &middot; '+mhr+'HR':'')+'</div></div>'
+      +'<div class="vs-pos-lbl">'+posLbl+'</div>'
+      +'<div class="vs-cell vs-cell-r'+(to>mo?' w':'')+'">'+tn+'<div class="vs-cell-sub">'+_fmtOps(to)+(thr?' &middot; '+thr+'HR':'')+'</div></div>'
       +'</div>';
   }
   return rows;
 }
+
 function _vsHeader(youW,youL,youEra,themW,themL,themEra,youLbl,themLbl) {
   var win=youW>themW,tied=youW===themW;
   var msg=tied?'Dead even — it would go to extras':win?'🏆 '+youLbl+' wins!':'🏆 '+themLbl+' wins!';
@@ -6575,27 +6685,38 @@ function _renderVsResult() {
 
   if (_vsDuel) {
     var p1=_vsDuel.p1, p2=_vsDuel.p2;
+    var win1=p1.w>p2.w, tied=p1.w===p2.w;
+    var winnerMsg = tied ? '&#x1F91D; Dead even!' : (win1 ? '&#x1F3C6; Player 1 wins!' : '&#x1F3C6; Player 2 wins!');
     el.innerHTML='<div class="card vs-section">'
-      +'<div class="res-divider">Full Matchup</div>'
+      +'<div class="res-divider">&#x2694; Matchup Report</div>'
+      +'<div class="vs-outcome-banner '+(win1?'you':'they')+(tied?' tie':'')+'">'+winnerMsg+'</div>'
       +_vsHeader(p1.w,162-p1.w,p1.era,p2.w,162-p2.w,p2.era,'Player 1','Player 2')
-      +'<div class="vs-note">OPS shown — eras differ, wins record is the fair judge</div>'
-      +'<div class="vs-grid">'+_vsRows(p1.l,p2.l,true)+'</div>'
+      +'<div class="vs-note">OPS &middot; HR per slot — most wins wins</div>'
+      +'<div class="vs-grid">'+_vsRows(p1.l,p2.l,true,p1.era,p2.era)+'</div>'
       +'</div>';
     return;
   }
   if (!_vsChallenge) { el.innerHTML=''; return; }
 
   var myW=S.lastResult?S.lastResult.wins:0;
+  var thW=_vsChallenge.w||0;
+  var iWin=myW>thW, isTied=myW===thW;
+  var winnerMsg2 = isTied ? '&#x1F91D; Tied!' : (iWin ? '&#x1F3C6; You win!' : '&#x1F3C6; Challenger wins!');
+  var myEnc = _buildChallengeData();
+  var responseBtn = _vsChallenge._id
+    ? '<button id="result-back-btn" class="challenge-btn" onclick="respondToChallenge()" style="margin-top:10px;width:100%">&#x2694; Submit Your Response &amp; See Report</button>'
+    : '<button id="result-back-btn" class="challenge-btn" onclick="copyResultBack()" style="margin-top:10px;width:100%">&#x2694; Share Result Back</button>';
   var accent=_ERA_ACCENTS[_vsChallenge.era]||'var(--border)';
-  el.innerHTML='<div class="card vs-section" style="border-left:3px solid '+accent+'">'
-    +'<div class="res-divider">Head-to-Head</div>'
-    +_vsHeader(myW,162-myW,S.era,_vsChallenge.w,162-_vsChallenge.w,_vsChallenge.era,'You','Challenger')
-    +'<div class="vs-note">OPS shown — era differences may apply</div>'
-    +'<div class="vs-grid">'+_vsRows(S.lineup,_vsChallenge.l,false)+'</div>'
-    +'<div style="text-align:center;margin-top:10px">'
-    +'<button class="challenge-btn" id="result-back-btn" onclick="copyResultBack()" style="font-size:12px;padding:8px 16px">📤 Share with Challenger</button>'
-    +'</div></div>';
+  el.innerHTML='<div class="card vs-section">'
+    +'<div class="res-divider">&#x2694; Challenge Response</div>'
+    +'<div class="vs-outcome-banner '+(iWin?'you':'they')+(isTied?' tie':'')+'">'+winnerMsg2+'</div>'
+    +_vsHeader(myW,162-myW,S.era,thW,162-thW,_vsChallenge.era,'You','Challenger')
+    +'<div class="vs-note">OPS &middot; HR per slot — wins record determines winner</div>'
+    +'<div class="vs-grid">'+_vsRows(S.lineup,_vsChallenge.l,false,S.era,_vsChallenge.era)+'</div>'
+    +responseBtn
+    +'</div>';
 }
+
 
 function _bannerAccent(el, acc) {
   el.style.borderColor = acc;
@@ -6776,7 +6897,7 @@ function _viewDuel(id) {
     var content = '<div class="res-divider">'+esc(g.label)+' Duel</div>'
       +_vsHeader(wins1,162-wins1,p1.era,wins2,162-wins2,p2.era,'You','Challenger')
       +'<div class="vs-note">Position-by-position OPS comparison</div>'
-      +'<div class="vs-grid">'+_vsRows(p1.l,p2.l,true)+'</div>';
+      +'<div class="vs-grid">'+_vsRows(p1.l,p2.l,true,p1.era,p2.era)+'</div>';
     document.getElementById('duel-modal-content').innerHTML = content;
     document.getElementById('duel-modal').style.display='flex';
   } catch(e) {}
@@ -6788,30 +6909,37 @@ function _closeDuelModal(e) {
 
 // ─── Share Challenge (native share API) ───────────────────────────────────────
 function shareChallenge() {
-  var enc = _encodeLineup(); if (!enc) return;
-  if (!_addChallenge(enc)) {
-    var btn = document.getElementById('challenge-btn');
-    if (btn) { var o=btn.textContent; btn.textContent='Max 3 active!'; setTimeout(function(){btn.textContent=o;},2500); }
-    return;
+  var data = _buildChallengeData(); if (!data) return;
+  var btn = document.getElementById('challenge-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  function _doShareUrl(url) {
+    var wins = data.wins;
+    var text = 'I built a '+wins+'-win '+(_ERA_LBL[data.era]||data.era)+' lineup in Murderers\u2019 Row. Think you can beat it?';
+    if (navigator.share) {
+      navigator.share({title:"Murderers\u2019 Row Challenge",text:text,url:url}).catch(function(err){
+        if (err.name!=='AbortError') { _copyFallback(url); }
+      });
+    } else {
+      _copyFallback(url);
+      if (btn) { btn.textContent='Link Copied!'; setTimeout(function(){ if(btn){btn.disabled=false;btn.textContent='\u2694 Challenge';} },2500); }
+    }
+    if (btn) btn.disabled = false;
   }
-  _renderVsHub();
-  var url = window.location.origin+window.location.pathname+'#vs='+enc;
-  var wins = S.lastResult ? S.lastResult.wins : 0;
-  var text = 'I just built a '+wins+'-win '+(_ERA_LBL[S.era]||S.era)+' era lineup in Murderers Row. Think you can beat it?';
-  if (navigator.share) {
-    navigator.share({title:'Murderers Row Challenge',text:text,url:url}).catch(function(err){
-      if (err.name!=='AbortError') _copyFallback(url);
+  if (window._fbSaveChallenge) {
+    window._fbSaveChallenge(data).then(function(id) {
+      localStorage.setItem('mr-vs-activeid', id);
+      _renderVsHub();
+      if (btn) { btn.disabled=false; btn.textContent='\u2694 Challenge'; }
+      _doShareUrl(window.location.origin+window.location.pathname+'#vs='+id);
+    }).catch(function(e) {
+      console.error('Challenge save failed', e);
+      if (btn) { btn.disabled=false; btn.textContent='Error — retry'; setTimeout(function(){if(btn)btn.textContent='\u2694 Challenge';},2500); }
     });
   } else {
-    _copyFallback(url);
-    var btn = document.getElementById('challenge-btn');
-    if (btn) { var o=btn.textContent; btn.textContent='Link Copied!'; setTimeout(function(){btn.textContent=o;},2500); }
+    if (btn) { btn.disabled=false; btn.textContent='\u2694 Challenge'; }
+    var enc = _encodeLineup();
+    _doShareUrl(window.location.origin+window.location.pathname+'#vs='+enc);
   }
 }
-</script>
-<script src="lahman_data.js"></script>
-<script src="lahman_awards_data.js"></script>
-<script src="woba_weights.js"></script>
-<div id="duel-modal" style="display:none" class="duel-modal-overlay" onclick="_closeDuelModal(event)"><div class="duel-modal-card"><button class="duel-modal-close" onclick="_closeDuelModal()">&#x2715;</button><div id="duel-modal-content"></div></div></div>
-</body>
-</html>
+
+
