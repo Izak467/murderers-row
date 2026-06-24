@@ -1196,6 +1196,11 @@ body.era-deadball::after {
 }
 .vs-banner-title { color: var(--gold); font-size: 13px; font-weight: 700; letter-spacing: 1px; }
 .vs-banner-sub { color: var(--cream-dim); font-size: 11px; margin-top: 3px; }
+.vs-banner-actions { display:flex; gap:8px; justify-content:center; margin-top:8px; }
+.vs-banner-btn { padding:5px 12px; font-size:11px; font-weight:700; border-radius:6px; cursor:pointer; border:1px solid var(--gold); color:var(--gold); background:transparent; transition:background .15s; }
+.vs-banner-btn:hover { background:rgba(201,164,74,.15); }
+.vs-banner-dismiss { border-color:var(--muted); color:var(--muted); }
+.vs-banner-dismiss:hover { background:rgba(255,255,255,.06); }
 .challenge-btn {
   padding: 13px 22px; background: transparent;
   border: 1.5px solid var(--gold); color: var(--gold);
@@ -6364,7 +6369,7 @@ function _copyFallback(t){var a=document.createElement('textarea');a.value=t;a.s
 function copyChallenge() {
   var enc = _encodeLineup(); if(!enc) return;
   localStorage.setItem('mr-vs-raw', enc);
-  _copyUrl(window.location.origin+window.location.pathname+'#vs='+enc,'challenge-btn','✓ Link Copied!');
+  _copyUrl(window.location.origin+window.location.pathname+'#vs='+enc,'challenge-btn','Copied!');
 }
 function copyResultBack() {
   if(!_vsChallenge||!_vsChallenge._raw) return;
@@ -6435,23 +6440,57 @@ function _renderVsResult() {
     +'</div></div>';
 }
 
+function _bannerAccent(el, acc) {
+  el.style.borderColor = acc;
+  var _hx=acc.replace('#','');
+  el.style.background='rgba('+parseInt(_hx.slice(0,2),16)+','+parseInt(_hx.slice(2,4),16)+','+parseInt(_hx.slice(4,6),16)+',0.1)';
+}
 function _showVsBanner() {
   var el = document.getElementById('vs-banner');
-  var sub = document.getElementById('vs-banner-sub');
   if (!el) return;
   if (_vsChallenge) {
     var acc = _ERA_ACCENTS[_vsChallenge.era]||'var(--gold)';
+    _bannerAccent(el, acc);
+    el.innerHTML='<div class="vs-banner-title">&#x2694; You\'ve Been Challenged!</div>'
+      +'<div class="vs-banner-sub">Challenger played '+(_ERA_LBL[_vsChallenge.era]||_vsChallenge.era)
+      +' era &middot; '+_vsChallenge.w+'&ndash;'+(162-_vsChallenge.w)+' wins. Beat them!</div>';
     el.style.display='';
-    el.style.borderColor = acc;
-    var _hx=acc.replace('#',''); el.style.background='rgba('+parseInt(_hx.slice(0,2),16)+','+parseInt(_hx.slice(2,4),16)+','+parseInt(_hx.slice(4,6),16)+',0.1)';
-    if(sub) sub.textContent='Challenger played ' + (_ERA_LBL[_vsChallenge.era]||_vsChallenge.era) + ' era · ' + _vsChallenge.w + '–66 wins. Beat them!';
   } else if (_vsDuel) {
+    el.style.borderColor=''; el.style.background='';
+    el.innerHTML='<div class="vs-banner-title">&#x2694; Duel Loaded</div>'
+      +'<div class="vs-banner-sub">Finish your lineup to see the full head-to-head</div>';
     el.style.display='';
-    if(sub) sub.textContent='Duel result loaded — finish your game to see the matchup, or view below.';
     _renderVsResult();
   } else {
-    el.style.display='none';
+    var raw = localStorage.getItem('mr-vs-raw');
+    if (raw) {
+      try {
+        var sent = _b64dec(raw);
+        var acc2 = _ERA_ACCENTS[sent.era]||'var(--gold)';
+        _bannerAccent(el, acc2);
+        el.innerHTML='<div class="vs-banner-title">&#x23F3; Waiting for Response&hellip;</div>'
+          +'<div class="vs-banner-sub">Your '+(_ERA_LBL[sent.era]||sent.era)+' era lineup &middot; '
+          +sent.w+'&ndash;'+(162-sent.w)+' wins</div>'
+          +'<div class="vs-banner-actions">'
+          +'<button class="vs-banner-btn" id="vs-recopy-btn" onclick="_copySentChallenge()">&#x1F4CB; Copy Link Again</button>'
+          +'<button class="vs-banner-btn vs-banner-dismiss" onclick="_clearSentChallenge()">&#x2715; Dismiss</button>'
+          +'</div>';
+        el.style.display='';
+      } catch(e) { localStorage.removeItem('mr-vs-raw'); el.style.display='none'; }
+    } else { el.style.display='none'; }
   }
+}
+function _copySentChallenge() {
+  var raw = localStorage.getItem('mr-vs-raw'); if(!raw) return;
+  var url = window.location.origin+window.location.pathname+'#vs='+raw;
+  var btn = document.getElementById('vs-recopy-btn');
+  if(btn) { var orig=btn.textContent; btn.textContent='Copied!'; setTimeout(function(){btn.textContent=orig;},2000); }
+  if(navigator.clipboard) { navigator.clipboard.writeText(url).catch(function(){_copyFallback(url);}); }
+  else { _copyFallback(url); }
+}
+function _clearSentChallenge() {
+  localStorage.removeItem('mr-vs-raw');
+  _showVsBanner();
 }
 
 // ─── Batting Order ────────────────────────────────────────────────────────────
