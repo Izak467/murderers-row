@@ -6365,6 +6365,8 @@ function decodeLineup(str) {
 function showSharedLineup(data) {
   if (!data || data.v !== 1 || !Array.isArray(data.s)) return;
   var POS_NAMES = ['C','1B','2B','3B','SS','LF','CF','RF','DH'];
+  var _lahmanErasShared = {deadball:1,golden:1,postwar:1,nostalgia:1};
+  function _posLbl(pos) { return (_lahmanErasShared[data.e] && (pos==='LF'||pos==='CF'||pos==='RF')) ? 'OF' : pos; }
   var ERA_NAMES = { modern:'Modern Era', steroid:'Juiced Era', nostalgia:'Hardball Era',
                     postwar:'Post-War Era', golden:'Golden Age', deadball:'Dead Ball Era' };
   var losses = 162 - (data.w || 0);
@@ -6375,7 +6377,7 @@ function showSharedLineup(data) {
   html += '</div><div class="shared-record">' + (data.w || 0) + ' – ' + losses + '</div></div>';
   for (var i = 0; i < 9; i++) {
     var slot = data.s[i];
-    html += '<div class="shared-slot"><div class="shared-slot-pos">' + POS_NAMES[i] + '</div>';
+    html += '<div class="shared-slot"><div class="shared-slot-pos">' + _posLbl(POS_NAMES[i]) + '</div>';
     if (slot && slot.n) {
       var st = slot.s || {};
       html += '<div class="shared-slot-name">' + esc(slot.n) + '</div>';
