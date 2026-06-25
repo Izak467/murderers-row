@@ -5759,7 +5759,10 @@ function buildBtnHtml(p, i, movingPlayer) {
             var isPending = pa && pa.playerIdx === i && pa.posIdx === posI;
             btnHtml += '<button class="pos-assign-btn'+(isPending?' pending':'')+'" onclick="onAssignClick('+i+','+posI+')">OF</button>';
           }
-        } else { seenOFFilled = true; }
+        } else if (!seenOFFilled) {
+          seenOFFilled = true;
+          btnHtml += '<button class="pos-assign-btn pos-filled" disabled>OF</button>';
+        }
       } else {
         if (S.lineup[posI] !== null) {
           btnHtml += '<button class="pos-assign-btn pos-filled" disabled>'+POS[posI]+'</button>';
@@ -5768,9 +5771,6 @@ function buildBtnHtml(p, i, movingPlayer) {
           btnHtml += '<button class="pos-assign-btn'+(isPending?' pending':'')+'" onclick="onAssignClick('+i+','+posI+')">'+POS[posI]+'</button>';
         }
       }
-    }
-    if (!seenOFOpen && seenOFFilled) {
-      btnHtml += '<button class="pos-assign-btn pos-filled" disabled>OF</button>';
     }
     if (!btnHtml) btnHtml = '<span style="font-size:11px;color:var(--muted)">—</span>';
   }
