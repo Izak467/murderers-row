@@ -1000,6 +1000,17 @@ body.era-deadball .era-desc-note { display: block; }
 }
 .vs-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; }
 .vs-toggle:has(input:checked) .vs-toggle-label { color: var(--era-accent); }
+.era-panel.era-locked .era-tab:not(.active) { opacity: 0.3; pointer-events: none; }
+.era-panel.era-locked #era-slider-wrap { opacity: 0.3; pointer-events: none; }
+.era-panel.era-locked .era-snap-card:not(.esc-active) { opacity: 0.3; pointer-events: none; }
+.era-panel.era-locked .vs-toggle { opacity: 0.5; pointer-events: none; }
+.era-lock-note {
+  display: none;
+  font-size: 10px; color: var(--era-accent);
+  text-align: center; margin: 6px 0 0;
+  font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+}
+.era-panel.era-locked .era-lock-note { display: block; }
 .vs-info {
   display: none;
   font-size: 11px; color: var(--muted);
@@ -1417,6 +1428,7 @@ body.era-deadball::after {
       <div class="era-desc-text" id="era-desc-text">Launch angles are optimized, the shift is banned, and every front office has a MIT grad running the numbers. From Pujols to Ohtani, the deepest and most statistically analyzed player pool in history. Build wisely.</div>
       <div class="era-desc-note">* XBH (2B+3B+HR) replaces HR in scoring for this era</div>
     </div>
+    <div class="era-lock-note" id="era-lock-note"></div>
     <div class="era-actions">
       <label class="hard-toggle">
         <input type="checkbox" id="hard-mode-toggle">
@@ -1431,7 +1443,7 @@ body.era-deadball::after {
       <button class="era-start-btn" onclick="startSelectedEra()">▶ Start</button>
     </div>
     <div class="vs-info" id="vs-info-box">
-      <strong>How it works:</strong> Build your lineup, then share a challenge link with a friend. They play the same spin and build their lineup. Once both are done, you both get a <strong>report card</strong> showing who won and a full lineup comparison.
+      <strong>How it works:</strong> Build your lineup, then share a challenge link with a friend. They pick from random pulls in your era and build their strongest team. Once both are done, you each get a <strong>report card</strong> showing who won and a slot-by-slot comparison.
     </div>
   </div>
 
@@ -5096,8 +5108,12 @@ function toggleVsInfo() {
 
 function startSelectedEra() {
   var hard = document.getElementById('hard-mode-toggle').checked;
-  var vs = document.getElementById('vs-mode-toggle').checked;
-  startGameWithEra(_selectedEra, hard, vs);
+  if (_vsChallenge && _vsChallenge._id) {
+    startGameWithEra(_vsChallenge.era, hard, true);
+  } else {
+    var vs = document.getElementById('vs-mode-toggle').checked;
+    startGameWithEra(_selectedEra, hard, vs);
+  }
 }
 
 function startGameWithEra(eraKey, hard, vs) {
@@ -6266,6 +6282,13 @@ function showScreen(name) {
   document.getElementById('screen-'+name).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
   if (name === 'landing') {
+    // Unlock era panel (re-locked below if _vsChallenge is active)
+    var _ep = document.querySelector('.era-panel');
+    if (_ep) _ep.classList.remove('era-locked');
+    var _sb = document.querySelector('.era-start-btn');
+    if (_sb) _sb.textContent = '► Start';
+    var _vt = document.getElementById('vs-mode-toggle');
+    if (_vt) _vt.disabled = false;
     buildEraSlider();
     buildEraSnap();
     selectEra(_selectedEra || 'modern');
@@ -6736,6 +6759,18 @@ function _showVsBanner() {
       +'<div class="vs-banner-sub">Challenger played '+(_ERA_LBL[_vsChallenge.era]||_vsChallenge.era)
       +' era &middot; '+_vsChallenge.w+'&ndash;'+(162-_vsChallenge.w)+' wins. Beat them!</div>';
     el.style.display='';
+    // Lock era panel to challenger's era when Player B opens a challenge link
+    selectEra(_vsChallenge.era);
+    var _ep2 = document.querySelector('.era-panel');
+    if (_ep2) _ep2.classList.add('era-locked');
+    var _ln = document.getElementById('era-lock-note');
+    if (_ln) _ln.textContent = '\u{1F512} Era locked: '+(_ERA_LBL[_vsChallenge.era]||_vsChallenge.era);
+    var _sb2 = document.querySelector('.era-start-btn');
+    if (_sb2) _sb2.textContent = '\u25BA Accept Challenge';
+    var _vt2 = document.getElementById('vs-mode-toggle');
+    if (_vt2) { _vt2.checked = true; _vt2.disabled = true; }
+    var _vi = document.getElementById('vs-info-box');
+    if (_vi) _vi.style.display = 'none';
   } else if (_vsDuel) {
     el.style.borderColor=''; el.style.background='';
     el.innerHTML='<div class="vs-banner-title">&#x2694; Duel Loaded</div>'
