@@ -176,6 +176,7 @@
   --red:        #c03a3a;
   --green-fld:  #1e4d30;
   --navy-lt:    #3a6090;
+  --era-accent: #2860c0;
 }
 
 body {
@@ -982,8 +983,8 @@ body.era-deadball .era-desc-note { display: block; }
   flex-shrink: 0;
 }
 .vs-toggle input:checked ~ .vs-toggle-track {
-  background: rgba(80,180,200,0.25);
-  border-color: rgba(80,180,200,0.6);
+  background: color-mix(in srgb, var(--era-accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--era-accent) 60%, transparent);
 }
 .vs-toggle-thumb {
   position: absolute;
@@ -995,10 +996,10 @@ body.era-deadball .era-desc-note { display: block; }
 }
 .vs-toggle input:checked ~ .vs-toggle-track .vs-toggle-thumb {
   transform: translateX(17px);
-  background: #50b4c8;
+  background: var(--era-accent);
 }
 .vs-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; }
-.vs-toggle:has(input:checked) .vs-toggle-label { color: #50b4c8; }
+.vs-toggle:has(input:checked) .vs-toggle-label { color: var(--era-accent); }
 .vs-info {
   display: none;
   font-size: 11px; color: var(--muted);
@@ -4768,6 +4769,8 @@ function applyEraTheme(era) {
   root.style.setProperty('--border',    t.border);
   root.style.setProperty('--border-lt', t.borderLt);
   root.style.setProperty('--muted',     t.muted);
+  var _accents = {deadball:'#8B2030',golden:'#b08820',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
+  root.style.setProperty('--era-accent', _accents[era] || '#2860c0');
 }
 
 // ─── Era Timeline Slider ─────────────────────────────────────────────────────
@@ -5931,9 +5934,9 @@ function showResults() {
     if (S.vsMode && !_vsChallenge) {
       chalBtn.style.display = '';
       chalBtn.textContent = '\u2694 Challenge a Friend';
-      chalBtn.style.background = 'rgba(80,180,200,0.15)';
-      chalBtn.style.borderColor = 'rgba(80,180,200,0.5)';
-      chalBtn.style.color = '#50b4c8';
+      chalBtn.style.background = '';
+      chalBtn.style.borderColor = '';
+      chalBtn.style.color = '';
     } else if (!_vsChallenge && !_vsDuel) {
       chalBtn.style.display = '';
     }
@@ -6941,5 +6944,10 @@ function shareChallenge() {
     _doShareUrl(window.location.origin+window.location.pathname+'#vs='+enc);
   }
 }
-
-
+</script>
+<script src="lahman_data.js"></script>
+<script src="lahman_awards_data.js"></script>
+<script src="woba_weights.js"></script>
+<div id="duel-modal" style="display:none" class="duel-modal-overlay" onclick="_closeDuelModal(event)"><div class="duel-modal-card"><button class="duel-modal-close" onclick="_closeDuelModal()">&#x2715;</button><div id="duel-modal-content"></div></div></div>
+</body>
+</html>
