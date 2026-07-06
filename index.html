@@ -983,8 +983,8 @@ body.era-deadball .era-desc-note { display: block; }
   flex-shrink: 0;
 }
 .vs-toggle input:checked ~ .vs-toggle-track {
-  background: color-mix(in srgb, var(--era-accent) 20%, transparent);
-  border-color: color-mix(in srgb, var(--era-accent) 60%, transparent);
+  background: rgba(201,164,74,0.22);
+  border-color: rgba(201,164,74,0.6);
 }
 .vs-toggle-thumb {
   position: absolute;
@@ -996,10 +996,10 @@ body.era-deadball .era-desc-note { display: block; }
 }
 .vs-toggle input:checked ~ .vs-toggle-track .vs-toggle-thumb {
   transform: translateX(17px);
-  background: var(--era-accent);
+  background: var(--gold);
 }
-.vs-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; }
-.vs-toggle:has(input:checked) .vs-toggle-label { color: var(--era-accent); }
+.vs-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; white-space: nowrap; }
+.vs-toggle:has(input:checked) .vs-toggle-label { color: var(--gold); }
 .era-panel.era-locked .era-tab:not(.active) { opacity: 0.3; pointer-events: none; }
 .era-panel.era-locked #era-slider-wrap { opacity: 0.3; pointer-events: none; }
 .era-panel.era-locked .era-snap-card:not(.esc-active) { opacity: 0.3; pointer-events: none; }
@@ -1020,7 +1020,7 @@ body.era-deadball .era-desc-note { display: block; }
   margin-top: 4px;
 }
 .vs-info.visible { display: block; }
-.vs-info strong { color: #50b4c8; }
+.vs-info strong { color: var(--gold); }
 .era-start-btn {
   margin-left: auto;
   padding: 11px 28px;
@@ -1445,20 +1445,20 @@ body.era-deadball::after {
     </div>
     <div class="era-lock-note" id="era-lock-note"></div>
     <div class="era-actions">
+      <label class="vs-toggle" onclick="toggleVsInfo()">
+        <input type="checkbox" id="vs-mode-toggle">
+        <span class="vs-toggle-track"><span class="vs-toggle-thumb"></span></span>
+        <span class="vs-toggle-label">⚔ H2H</span>
+      </label>
       <label class="hard-toggle">
         <input type="checkbox" id="hard-mode-toggle">
         <span class="hard-toggle-track"><span class="hard-toggle-thumb"></span></span>
         <span class="hard-toggle-label">☠ Hard Mode</span>
       </label>
-      <label class="vs-toggle" onclick="toggleVsInfo()">
-        <input type="checkbox" id="vs-mode-toggle">
-        <span class="vs-toggle-track"><span class="vs-toggle-thumb"></span></span>
-        <span class="vs-toggle-label">⚔ Head-to-Head</span>
-      </label>
       <button class="era-start-btn" onclick="startSelectedEra()">▶ Start</button>
     </div>
     <div class="vs-info" id="vs-info-box">
-      <strong>How it works:</strong> Finish your game, then send the challenge link to a friend. They build their own lineup from the same era — and the moment they play, the <strong>duel report</strong> shows up right here on your home screen, slot by slot.
+      <strong>Head-to-Head — how it works:</strong> Finish your game, then send the challenge link to a friend. They build their own lineup from the same era — and the moment they play, the <strong>duel report</strong> shows up right here on your home screen, slot by slot.
     </div>
   </div>
 
@@ -1622,7 +1622,7 @@ body.era-deadball::after {
       <span style="background:rgba(180,60,60,0.22);border:1px solid rgba(220,80,80,0.55);color:#f08080;padding:4px 16px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:2px">☠ HARD MODE</span>
     </div>
     <div id="vs-mode-badge" style="display:none">
-      <span style="background:rgba(80,180,200,0.18);border:1px solid rgba(80,180,200,0.5);color:#50b4c8;padding:4px 16px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:2px">⚔ H2H</span>
+      <span style="background:rgba(201,164,74,0.12);border:1px solid rgba(201,164,74,0.5);color:var(--gold);padding:4px 16px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:2px">⚔ H2H</span>
     </div>
     <div id="era-badge" style="display:none;background:rgba(201,164,74,0.12);border:1px solid var(--gold-dk);color:var(--gold);padding:4px 16px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:1.5px"></div>
   </div>
