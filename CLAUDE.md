@@ -200,7 +200,8 @@ Both players keep a local entry in localStorage `mr-h2h-games`:
 **Turn loop (GamePigeon-style):**
 - Sender plays with the ⚔ Head-to-Head toggle on → results screen shows a send card ("Your Move Is In" → "⏳ Their Move" once sent). The Firebase doc is **pre-created when the card renders** (`_h2hPrepare`) so `navigator.share` fires synchronously on tap (iOS drops the share sheet if the user gesture expires during an async save).
 - `_h2hSync()` polls open sender games on page load / tab-visible (30s throttle) → hub row flips to "🔔 They played!".
-- Responder opens link → era locked, banner "You've Been Challenged" → plays → submit card (no spoiler comparison) → final duel report inline + "Send Result Back".
+- Responder opens link → era locked, **no-spoiler banner** (era only — never the sender's record; share text has no wins either) → plays → **first completed lineup auto-submits** (`_h2hSubmitState`, kills replay-until-you-win) → final duel report inline + "Send Result Back".
+- Invite links route through per-era stub pages `h2h-{era}.html` (era-colored OG image `og-h2h-{era}.png`) that JS-redirect to `/#vs={id}` — static OG tags are the only way to era-color iMessage previews on GitHub Pages. Generator scripts live in session scratchpad history (Pillow).
 - Opening your own link shows the waiting banner, not the challenge banner (localStorage role check + uid fallback).
 - Home-screen hub (`#vs-hub`) lists all games with turn-status chips; View opens the duel modal.
 
@@ -218,6 +219,9 @@ match /challenges/{id} {
   allow update: if request.auth != null
                 && resource.data.p2wins == null
                 && request.auth.uid != resource.data.uid
+                && request.resource.data.p2wins is int
+                && request.resource.data.p2wins >= 0
+                && request.resource.data.p2wins <= 162
                 && request.resource.data.diff(resource.data).affectedKeys()
                      .hasOnly(['p2wins','p2era','p2slots','p2uid','p2ts']);
   allow delete: if false;

@@ -6558,8 +6558,10 @@ buildEraSnap();
 // One Firebase doc per game (challenges/{id}). Sender + responder each keep a
 // local entry in localStorage 'mr-h2h-games' so both sides can always see the
 // game's state. The same #vs={id} link always shows the current state.
+// Anti-spoiler: the responder never sees the sender's record until their own
+// move auto-submits on completion (prevents replay-until-you-win).
 var _vsChallenge = null, _vsChallengeId = null, _vsDuel = null;
-var _h2hOwnWaiting = null, _h2hNotice = null;
+var _h2hOwnWaiting = null, _h2hNotice = null, _h2hSubmitState = null;
 var _ERA_ACCENTS = {deadball:'#8B2030',golden:'#b08820',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
 var _ERA_LBL = {modern:'Modern',steroid:'Juiced',nostalgia:'Hardball',postwar:'Post-War',golden:'Golden Age',deadball:'Dead Ball'};
 
@@ -6579,6 +6581,14 @@ function _h2hMkLabel(era) {
   return (_ERA_LBL[era]||era)+(n>1?' #'+n:'');
 }
 function _h2hUrl(id) { return window.location.origin+window.location.pathname+'#vs='+id; }
+// Challenge invites route through per-era stub pages so the iMessage link
+// preview is era-colored before the recipient ever opens it.
+function _h2hShareUrl(id, era) {
+  if (_ERA_ACCENTS[era] && window.location.protocol.slice(0,4)==='http') {
+    return window.location.origin+'/h2h-'+era+'.html#vs='+id;
+  }
+  return _h2hUrl(id);
+}
 
 // ── Parse #vs= link (Firebase short IDs) ──
 (function() {
@@ -6617,6 +6627,7 @@ function _loadFirebaseChallenge(id) {
       }
       _h2hOwnWaiting = mine;
     } else {
+      // No spoilers: keep the sender's record out of the responder-facing state
       _vsChallenge = { era:data.era, w:data.wins, l:data.slots, _id:id, _uid:data.uid };
     }
     _showVsBanner(); _renderVsHub();
@@ -6677,7 +6688,7 @@ function _copyUrl(url, btnId, doneLabel) {
   else{_copyFallback(url);_done();}
 }
 function _copyFallback(t){var a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;opacity:0';document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(a);}
-function _h2hCopyLink(id, btnId) { _copyUrl(_h2hUrl(id), btnId, '✓ Copied!'); }
+function _h2hCopyLink(id, era, btnId) { _copyUrl(_h2hShareUrl(id, era), btnId, '✓ Copied!'); }
 
 // ── Send flow (sender) ──
 // The Firebase game doc is pre-created when the send card renders, so tapping
@@ -6702,8 +6713,8 @@ function shareChallenge() {
     _renderVsHub(); _renderVsResult();
     var cb = document.getElementById('challenge-btn');
     if (cb) cb.style.display = 'none';
-    var url = _h2hUrl(id);
-    var text = '⚔ Murderers’ Row: I put up '+data.wins+' wins with a '+(_ERA_LBL[data.era]||data.era)+' era lineup. Your move — think you can beat it?';
+    var url = _h2hShareUrl(id, data.era);
+    var text = '⚔ Murderers’ Row: I challenge you to a '+(_ERA_LBL[data.era]||data.era)+' era duel. Think you can beat my nine?';
     if (navigator.share) { navigator.share({title:'Murderers’ Row — Head-to-Head',text:text,url:url}).catch(function(){}); }
     else {
       _copyFallback(url);
@@ -6724,18 +6735,17 @@ function shareChallenge() {
 }
 
 // ── Respond flow (responder) ──
+// Auto-submits the first completed lineup: no replay-until-you-win.
 function respondToChallenge() {
   if (!_vsChallenge || !_vsChallenge._id) return;
+  if (_h2hSubmitState === 'sending') return;
   var data = _buildChallengeData(); if (!data) return;
+  if (!window._fbRespondChallenge) { setTimeout(respondToChallenge, 300); return; }
   var id = _vsChallenge._id;
-  var btn = document.getElementById('result-back-btn');
   var uid = window._fbUid || null;
-  if (uid && _vsChallenge._uid && uid === _vsChallenge._uid) {
-    if (btn) { btn.textContent='This is your own game!'; setTimeout(function(){if(btn)btn.textContent='⚔ Submit & Reveal the Duel';},2500); }
-    return;
-  }
-  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+  _h2hSubmitState = 'sending';
   window._fbRespondChallenge(id, {p2wins:data.wins,p2era:data.era,p2slots:data.slots,p2uid:uid,p2ts:Date.now()}).then(function() {
+    _h2hSubmitState = null;
     _vsDuel = { p1:{era:_vsChallenge.era,w:_vsChallenge.w,l:_vsChallenge.l}, p2:{era:data.era,w:data.wins,l:data.slots}, _id:id, _role:'responder' };
     _h2hUpsert({ id:id, role:'responder', era:data.era, myW:data.wins, oppW:_vsChallenge.w, oppEra:_vsChallenge.era,
       status:'done', seen:true, label:_h2hMkLabel(data.era), ts:Date.now(),
@@ -6745,7 +6755,17 @@ function respondToChallenge() {
     _showVsBanner(); _renderVsHub();
   }).catch(function(e) {
     console.error(e);
-    if (btn) { btn.disabled=false; btn.textContent='Error — tap to retry'; }
+    // If the write was rejected because someone already answered, show that
+    window._fbGetChallenge(id).then(function(d) {
+      if (d && d.p2wins !== null && d.p2slots) {
+        _vsChallenge = null; _h2hSubmitState = null;
+        _h2hNotice = 'This challenge was already answered on another device.';
+        _openDuelReport(d, null, null);
+        _renderVsResult(); _showVsBanner();
+      } else {
+        _h2hSubmitState = 'error'; _renderVsResult();
+      }
+    }).catch(function() { _h2hSubmitState = 'error'; _renderVsResult(); });
   });
 }
 function _h2hShareBack(id) {
@@ -6838,14 +6858,14 @@ function _h2hSendCard() {
       +'<div><span class="h2h-chip their-move">⏳ Their Move</span></div>'
       +'<div class="h2h-record-line">Your <b>'+w+'&ndash;'+(162-w)+'</b> '+eraLbl+' lineup is locked in.</div>'
       +'<div class="h2h-sub">Challenge sent! When your rival plays, the result shows up on your home screen — and this game’s link always shows its latest state.</div>'
-      +'<button id="h2h-copy-btn" class="vs-banner-btn" onclick="_h2hCopyLink(\''+S._h2hSentId+'\',\'h2h-copy-btn\')">\u{1F4CB} Copy Game Link</button>'
+      +'<button id="h2h-copy-btn" class="vs-banner-btn" onclick="_h2hCopyLink(\''+S._h2hSentId+'\',\''+S.era+'\',\'h2h-copy-btn\')">\u{1F4CB} Copy Game Link</button>'
       +'</div>';
   }
   return '<div class="card vs-section h2h-send-card">'
     +'<div class="res-divider">⚔ Head-to-Head</div>'
     +'<div><span class="h2h-chip your-move">Your Move Is In</span></div>'
     +'<div class="h2h-record-line">You went <b>'+w+'&ndash;'+(162-w)+'</b> in the '+eraLbl+' era.</div>'
-    +'<div class="h2h-sub">Send it to a friend — they build their own '+eraLbl+' lineup, then you both get the duel report.</div>'
+    +'<div class="h2h-sub">Send it to a friend — they build their own '+eraLbl+' lineup blind, then you both get the duel report. Their first finished lineup counts, no do-overs.</div>'
     +'<button id="h2h-send-btn" class="h2h-send-btn" onclick="shareChallenge()">\u{1F4E4} Send Challenge</button>'
     +'</div>';
 }
@@ -6864,15 +6884,22 @@ function _renderVsResult() {
     return;
   }
   if (_vsChallenge) {
-    // Responder finished a lineup but hasn't submitted yet
+    // Responder just finished - their first result auto-submits. No spoilers:
+    // the sender's record stays hidden until the report reveals.
     var myW = S.lastResult ? S.lastResult.wins : 0;
-    var thW = _vsChallenge.w||0;
+    var inner;
+    if (_h2hSubmitState === 'error') {
+      inner = '<div class="h2h-sub">Couldn’t submit your move — check your connection.</div>'
+        +'<button id="result-back-btn" class="h2h-send-btn" onclick="respondToChallenge()">⚔ Retry Submit</button>';
+    } else {
+      inner = '<div class="h2h-sub">Locking in your move&hellip; the duel report reveals both lineups in a moment.</div>';
+      if (_h2hSubmitState !== 'sending') setTimeout(respondToChallenge, 0);
+    }
     el.innerHTML = '<div class="card vs-section h2h-send-card">'
       +'<div class="res-divider">⚔ Head-to-Head</div>'
       +'<div><span class="h2h-chip your-move">Your Move Is In</span></div>'
-      +'<div class="h2h-record-line">You: <b>'+myW+'&ndash;'+(162-myW)+'</b> &nbsp;&middot;&nbsp; Them: <b>'+thW+'&ndash;'+(162-thW)+'</b></div>'
-      +'<div class="h2h-sub">Lock it in to reveal the slot-by-slot duel report.</div>'
-      +'<button id="result-back-btn" class="h2h-send-btn" onclick="respondToChallenge()">⚔ Submit &amp; Reveal the Duel</button>'
+      +'<div class="h2h-record-line">You went <b>'+myW+'&ndash;'+(162-myW)+'</b>.</div>'
+      +inner
       +'</div>';
     return;
   }
@@ -6904,9 +6931,10 @@ function _showVsBanner() {
   if (_vsChallenge) {
     var acc = _ERA_ACCENTS[_vsChallenge.era]||'var(--gold)';
     _bannerAccent(el, acc);
+    // No spoilers: era only, never the sender's record
     el.innerHTML='<div class="vs-banner-title">⚔ You’ve Been Challenged!</div>'
-      +'<div class="vs-banner-sub">Your rival went '+_vsChallenge.w+'&ndash;'+(162-_vsChallenge.w)
-      +' in the '+(_ERA_LBL[_vsChallenge.era]||_vsChallenge.era)+' era. Build a better lineup from the same era — your move.</div>';
+      +'<div class="vs-banner-sub">A rival challenged you to a '+(_ERA_LBL[_vsChallenge.era]||_vsChallenge.era)
+      +' era duel. Build your best nine — your first finished lineup is your move, no do-overs.</div>';
     el.style.display='';
     // Lock the era panel to the challenger's era
     selectEra(_vsChallenge.era);
@@ -6928,7 +6956,7 @@ function _showVsBanner() {
     el.innerHTML='<div class="vs-banner-title">⏳ Their Move</div>'
       +'<div class="vs-banner-sub">Your '+(_ERA_LBL[g.era]||g.era)+' lineup ('+g.myW+'&ndash;'+(162-g.myW)+') is waiting on your rival.</div>'
       +'<div class="vs-banner-actions">'
-      +'<button class="vs-banner-btn" id="vs-recopy-btn" onclick="_h2hCopyLink(\''+g.id+'\',\'vs-recopy-btn\')">\u{1F4CB} Copy Link Again</button>'
+      +'<button class="vs-banner-btn" id="vs-recopy-btn" onclick="_h2hCopyLink(\''+g.id+'\',\''+g.era+'\',\'vs-recopy-btn\')">\u{1F4CB} Copy Link Again</button>'
       +'<button class="vs-banner-btn vs-banner-dismiss" onclick="_h2hOwnWaiting=null;_showVsBanner()">✕ Dismiss</button>'
       +'</div>';
     el.style.display='';
@@ -6988,8 +7016,8 @@ function _viewDuel(id) {
 }
 function _reshareGame(id) {
   var g = _h2hGet(id); if (!g) return;
-  var url = _h2hUrl(id);
-  var text = '⚔ Murderers’ Row: I put up '+g.myW+' wins with a '+(_ERA_LBL[g.era]||g.era)+' era lineup. Your move — think you can beat it?';
+  var url = _h2hShareUrl(id, g.era);
+  var text = '⚔ Murderers’ Row: I challenge you to a '+(_ERA_LBL[g.era]||g.era)+' era duel. Think you can beat my nine?';
   if (navigator.share) { navigator.share({title:'Murderers’ Row — Head-to-Head',text:text,url:url}).catch(function(){}); }
   else { _copyUrl(url, 'hub-copy-'+id, '✓'); }
 }
