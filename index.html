@@ -966,7 +966,7 @@ body.era-deadball .era-desc-note { display: block; }
   transform: translateX(17px);
   background: #f08080;
 }
-.hard-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; }
+.hard-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; white-space: nowrap; }
 .hard-toggle:has(input:checked) .hard-toggle-label { color: #f08080; }
 .vs-toggle {
   display: flex; align-items: center; gap: 8px;
@@ -6714,7 +6714,7 @@ function shareChallenge() {
     var cb = document.getElementById('challenge-btn');
     if (cb) cb.style.display = 'none';
     var url = _h2hShareUrl(id, data.era);
-    var text = '⚔ Murderers’ Row: I challenge you to a '+(_ERA_LBL[data.era]||data.era)+' era duel. Think you can beat my nine?';
+    var text = 'I challenge you to a '+(_ERA_LBL[data.era]||data.era)+' era duel in Murderers’ Row.';
     if (navigator.share) { navigator.share({title:'Murderers’ Row — Head-to-Head',text:text,url:url}).catch(function(){}); }
     else {
       _copyFallback(url);
@@ -7017,7 +7017,7 @@ function _viewDuel(id) {
 function _reshareGame(id) {
   var g = _h2hGet(id); if (!g) return;
   var url = _h2hShareUrl(id, g.era);
-  var text = '⚔ Murderers’ Row: I challenge you to a '+(_ERA_LBL[g.era]||g.era)+' era duel. Think you can beat my nine?';
+  var text = 'I challenge you to a '+(_ERA_LBL[g.era]||g.era)+' era duel in Murderers’ Row.';
   if (navigator.share) { navigator.share({title:'Murderers’ Row — Head-to-Head',text:text,url:url}).catch(function(){}); }
   else { _copyUrl(url, 'hub-copy-'+id, '✓'); }
 }
