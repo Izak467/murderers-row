@@ -188,6 +188,42 @@ Era description text controlled by `_ERA_DESCS` object (~line 3442) — add entr
 
 ---
 
+## Head-to-Head (1v1) feature — reworked July 2026
+
+Formerly "1v1 Challenge". One Firebase doc per game in `challenges/{id}` (7-char id):
+`{era, wins, slots, uid, ts}` from the sender; `{p2wins, p2era, p2slots, p2uid, p2ts}` merged in by the responder.
+Share links are `#vs={id}` — the same link always shows the game's current state.
+
+Both players keep a local entry in localStorage `mr-h2h-games`:
+`{id, role:'sender'|'responder', era, myW, oppW, oppEra, status:'waiting'|'done', seen, label, ts, doc}`.
+
+**Turn loop (GamePigeon-style):**
+- Sender plays with the ⚔ Head-to-Head toggle on → results screen shows a send card ("Your Move Is In" → "⏳ Their Move" once sent). The Firebase doc is **pre-created when the card renders** (`_h2hPrepare`) so `navigator.share` fires synchronously on tap (iOS drops the share sheet if the user gesture expires during an async save).
+- `_h2hSync()` polls open sender games on page load / tab-visible (30s throttle) → hub row flips to "🔔 They played!".
+- Responder opens link → era locked, banner "You've Been Challenged" → plays → submit card (no spoiler comparison) → final duel report inline + "Send Result Back".
+- Opening your own link shows the waiting banner, not the challenge banner (localStorage role check + uid fallback).
+- Home-screen hub (`#vs-hub`) lists all games with turn-status chips; View opens the duel modal.
+
+Key functions (single JS module after `// ─── Head-to-Head (1v1)` header): `_h2hGames/_h2hUpsert`, `_loadFirebaseChallenge`, `_h2hSync`, `shareChallenge`, `respondToChallenge`, `_renderVsResult`, `_showVsBanner`, `_renderVsHub`, `_duelReportHtml`.
+Legacy base64 `#vs=` links (pre-Firebase) are no longer parsed.
+
+**⚠ Firestore rules must allow the `challenges` collection.** As of 2026-07-06 the console rules deny ALL access (verified via REST: PERMISSION_DENIED on create/get/update) — the backend never worked. Required addition inside `match /databases/{database}/documents { }` (keep existing scores/users rules):
+
+```
+match /challenges/{id} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if request.auth != null
+                && request.resource.data.keys().hasAll(['era','wins','slots','uid','ts']);
+  allow update: if request.auth != null
+                && resource.data.p2wins == null
+                && request.auth.uid != resource.data.uid
+                && request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['p2wins','p2era','p2slots','p2uid','p2ts']);
+  allow delete: if false;
+}
+```
+
 ## Other files in repo
 
 | File | Purpose |
