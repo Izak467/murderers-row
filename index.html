@@ -20,7 +20,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, query, where, orderBy, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, query, where, orderBy, getDocs, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDADra-ckABsD_EbRq5ZkEeHvN5bkp5Z4E",
@@ -53,12 +53,15 @@
       String(today.getMonth()+1).padStart(2,'0') + '-' +
       String(today.getDate()).padStart(2,'0');
 
-    // Save to scores collection
+    // Save to scores collection. The display name is denormalised onto each
+    // score so the board needs no extra reads; a rename only affects new rows,
+    // which is fine for a board that resets daily.
     await addDoc(collection(db, coll), {
       uid:       window._fbUid,
       date:      dateStr,
       wins:      wins,
       lineup:    lineupSummary,
+      name:      window._mrName || null,
       ts:        Date.now()
     });
 
@@ -128,6 +131,33 @@
     if (!window._fbUid) return null;
     var snap = await getDoc(doc(db, 'users', window._fbUid));
     return snap.exists() ? snap.data() : { pb: 0, streak: 0 };
+  };
+
+  // ── Username claim ───────────────────────────────────────────
+  // Uniqueness comes from the document ID: rules allow `create` but never
+  // `update`, so the first writer of usernames/{lowercased} wins and everyone
+  // after gets permission-denied. No transaction needed for correctness.
+  window._fbClaimUsername = async function(nameLower, display) {
+    if (!window._fbUid) return { ok: false, reason: 'noauth' };
+    try {
+      await setDoc(doc(db, 'usernames', nameLower), { uid: window._fbUid, ts: Date.now() });
+    } catch (e) {
+      var code = (e && e.code) || '';
+      // permission-denied means either already claimed, or the rules block
+      // isn't installed yet — both are "you can't have this name right now".
+      return { ok: false, reason: code === 'permission-denied' ? 'taken' : 'error', code: code };
+    }
+    try {
+      await setDoc(doc(db, 'users', window._fbUid),
+        { name: display, nameLower: nameLower }, { merge: true });
+    } catch (e) { /* profile write is best-effort; the claim is what matters */ }
+    return { ok: true };
+  };
+
+  // Releasing lets someone rename without orphaning their old handle.
+  window._fbReleaseUsername = async function(nameLower) {
+    if (!window._fbUid || !nameLower) return;
+    try { await deleteDoc(doc(db, 'usernames', nameLower)); } catch (e) {}
   };
 
   // ── 1v1 Challenge storage ────────────────────────────────────
@@ -650,6 +680,18 @@ body::before {
 .lb-row-me .lb-name { color: var(--gold); font-weight: 700; }
 .lb-wins { font-weight: 700; color: var(--cream); font-variant-numeric: tabular-nums; }
 .lb-pb-flag { display: inline-block; font-size: 8px; font-weight: 800; letter-spacing: 1px; color: #0d1b2a; background: var(--gold); border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+.lb-you-tag { font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #0d1b2a; background: var(--gold); border-radius: 3px; padding: 1px 4px; margin-left: 5px; }
+.lb-name-bar { font-size: 11px; color: var(--muted); padding: 10px 2px 2px; margin-top: 6px; border-top: 1px solid var(--border); }
+.lb-name-bar strong { color: var(--cream-dim); }
+.lb-name-link { background: none; border: none; color: var(--gold); font-size: 11px; font-weight: 700; cursor: pointer; padding: 2px 4px; text-decoration: underline; }
+.lb-name-link:hover { color: var(--gold-lt); }
+.lb-name-form { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lb-name-input { flex: 1 1 140px; min-width: 120px; padding: 7px 9px; background: var(--bg); color: var(--cream); border: 1px solid var(--border-lt); border-radius: 6px; font-size: 13px; font-family: inherit; }
+.lb-name-input:focus { outline: none; border-color: var(--gold-dk); }
+.lb-name-save { padding: 7px 14px; background: var(--gold); color: #0d1b2a; border: none; border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer; }
+.lb-name-save:disabled { opacity: .6; cursor: default; }
+.lb-name-msg { flex: 1 0 100%; font-size: 11px; color: var(--muted); min-height: 14px; }
+.lb-name-msg.err { color: #f08080; }
 .res-divider:first-child { border-top: none; padding-top: 0; margin-top: 0; }
 
 /* Aggregate big numbers */
@@ -5966,6 +6008,165 @@ function setSort(col) {
   }
 }
 
+// ─── Username ────────────────────────────────────────────────────────────────
+// Uniqueness is enforced server-side by the usernames/{id} create-only rule.
+// Everything here is validation + UX; a determined user can bypass the filter
+// by calling the API directly, so treat it as a guard rail, not a wall.
+var MR_NAME_KEY = 'mr-username';
+
+// Substring matches — severe or unambiguous enough that catching them inside a
+// longer word is correct ("asshole" has no innocent host word).
+var _BAD_SUB = ['nigg','fagg','faggot','kike','chink','spic','wetback','tranny',
+  'rape','rapist','cunt','whore','molest','pedo','nazi','hitler','klan',
+  'asshole','arsehole','motherfuck','bullshit','dumbass','jackass','shithead',
+  'dickhead','cocksuck','blowjob',
+  // No innocent English word hosts these, so substring is safe and it catches
+  // compounds like "fuckyou" that a whole-word pass would miss.
+  'fuck','bitch','slut','twat','wank','jizz','shit'];
+// Whole-word only — each of these lives inside common words or surnames:
+// ass/assist, cock/Hancock, dick/Dickerson, sex/Sussex, tit/Titan, cum/Cumbria,
+// anus/Uranus, hoe/shoe.
+var _BAD_WORD = ['ass','arse','bastard','cock','dick','damn','piss','crap','prick',
+  'penis','vagina','anus','sex','porn','hoe','fag','tit','tits','boob','boobs',
+  'cum','turd','douche','retard'];
+// Real words/places that contain a flagged substring. Stripped before the
+// substring pass so "Scunthorpe" and "Scunthorpe_FC" both survive.
+var _NAME_OK = ['scunthorpe','penistone','shiitake','shitake','assisi','cockburn',
+  'hancock','dickerson','bassett','sussex','essex','middlesex','lightwater','clitheroe',
+  'wankel','hitchcock','titleist'];
+
+// Fold common substitutions so "sh1t", "f_u_c_k", "aaaass" don't sail through.
+// collapse=1 squashes every run to a single char, which catches padded evasions
+// like "fuuuuck"; collapse=2 keeps genuine doubles ("Bassett") intact. Both
+// forms get checked, since neither alone covers all cases.
+function _normName2(s, collapse) {
+  var map = {'0':'o','1':'i','3':'e','4':'a','5':'s','7':'t','8':'b','@':'a','$':'s','!':'i','|':'i','+':'t'};
+  var out = String(s).toLowerCase()
+    .replace(/[013457 8@$!|+]/g, function(c) { return map[c] || ''; })
+    .replace(/[^a-z]/g, '');
+  return collapse === 1 ? out.replace(/(.)\1+/g, '$1') : out.replace(/(.)\1{2,}/g, '$1$1');
+}
+
+function _isCleanName(raw) {
+  var forms = [_normName2(raw, 2), _normName2(raw, 1)];
+  if (!forms[0]) return true;
+
+  for (var f = 0; f < forms.length; f++) {
+    // Remove known-innocent hosts before substring matching.
+    var stripped = forms[f];
+    for (var k = 0; k < _NAME_OK.length; k++) {
+      var okForm = _normName2(_NAME_OK[k], f === 1 ? 1 : 2);
+      stripped = stripped.split(okForm).join('');
+    }
+    for (var i = 0; i < _BAD_SUB.length; i++) {
+      var badForm = _normName2(_BAD_SUB[i], f === 1 ? 1 : 2);
+      if (badForm && stripped.indexOf(badForm) !== -1) return false;
+    }
+    // Separator evasion: "f_u_c_k" and "s.h.i.t" collapse to the bare word,
+    // which the token pass below would never see.
+    for (var w = 0; w < _BAD_WORD.length; w++) {
+      if (stripped === _normName2(_BAD_WORD[w], f === 1 ? 1 : 2)) return false;
+    }
+  }
+
+  // Whole-word pass on the raw text, so only a standalone token trips it.
+  var parts = String(raw).toLowerCase().split(/[^a-z0-9]+/);
+  for (var j = 0; j < parts.length; j++) {
+    var p = parts[j].replace(/[013457@$!|]/g, function(c) {
+      return {'0':'o','1':'i','3':'e','4':'a','5':'s','7':'t','@':'a','$':'s','!':'i','|':'i'}[c];
+    });
+    if (_BAD_WORD.indexOf(p) !== -1) return false;
+  }
+  return true;
+}
+
+// Returns {ok:true, lower, display} or {ok:false, msg}
+function _validateName(raw) {
+  var display = String(raw || '').trim();
+  if (display.length < 3)  return { ok: false, msg: 'At least 3 characters.' };
+  if (display.length > 16) return { ok: false, msg: 'Max 16 characters.' };
+  if (!/^[A-Za-z0-9_]+$/.test(display)) return { ok: false, msg: 'Letters, numbers and _ only.' };
+  if (!_isCleanName(display)) return { ok: false, msg: 'Pick a different name.' };
+  return { ok: true, lower: display.toLowerCase(), display: display };
+}
+
+function _loadName() {
+  try {
+    var raw = localStorage.getItem(MR_NAME_KEY);
+    if (!raw) return null;
+    var o = JSON.parse(raw);
+    return (o && o.display) ? o : null;
+  } catch (e) { return null; }
+}
+function _storeName(o) {
+  try { localStorage.setItem(MR_NAME_KEY, JSON.stringify(o)); } catch (e) {}
+}
+
+(function _initName() {
+  var n = _loadName();
+  if (n) window._mrName = n.display;
+})();
+
+function _renderNameBar() {
+  var el = document.getElementById('lb-name-bar');
+  if (!el) return;
+  var n = _loadName();
+  if (n) {
+    el.innerHTML = 'Playing as <strong>' + esc(n.display) + '</strong> '
+      + '<button class="lb-name-link" onclick="_openNameForm()">change</button>';
+  } else {
+    el.innerHTML = 'Playing as <strong>Anonymous</strong> '
+      + '<button class="lb-name-link" onclick="_openNameForm()">pick a username</button>';
+  }
+}
+
+function _openNameForm() {
+  var el = document.getElementById('lb-name-bar');
+  if (!el) return;
+  var cur = _loadName();
+  el.innerHTML = '<div class="lb-name-form">'
+    + '<input id="lb-name-input" class="lb-name-input" maxlength="16" placeholder="username" '
+    + 'value="' + esc(cur ? cur.display : '') + '" autocomplete="off" autocapitalize="off" spellcheck="false">'
+    + '<button class="lb-name-save" id="lb-name-save" onclick="_submitName()">Save</button>'
+    + '<button class="lb-name-link" onclick="_renderNameBar()">cancel</button>'
+    + '<div class="lb-name-msg" id="lb-name-msg"></div></div>';
+  var inp = document.getElementById('lb-name-input');
+  if (inp) { inp.focus(); inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') _submitName(); }); }
+}
+
+function _submitName() {
+  var inp = document.getElementById('lb-name-input');
+  var msg = document.getElementById('lb-name-msg');
+  var btn = document.getElementById('lb-name-save');
+  if (!inp || !msg) return;
+  function fail(t) { msg.textContent = t; msg.className = 'lb-name-msg err'; if (btn) { btn.disabled = false; btn.textContent = 'Save'; } }
+
+  var v = _validateName(inp.value);
+  if (!v.ok) { fail(v.msg); return; }
+  if (!window._fbClaimUsername) { fail('Offline — try again later.'); return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+  msg.textContent = ''; msg.className = 'lb-name-msg';
+
+  var prev = _loadName();
+  if (prev && prev.lower === v.lower) { _storeName(v); window._mrName = v.display; _renderNameBar(); return; }
+
+  _awaitUid().then(function(uid) {
+    if (!uid) { fail('Not signed in yet — try again in a moment.'); return; }
+    return window._fbClaimUsername(v.lower, v.display).then(function(r) {
+      if (!r.ok) {
+        fail(r.reason === 'taken' ? 'That name is taken.' : 'Couldn’t save — try again.');
+        return;
+      }
+      // Free the old handle so it isn't orphaned. Best-effort.
+      if (prev && prev.lower && window._fbReleaseUsername) window._fbReleaseUsername(prev.lower);
+      _storeName(v);
+      window._mrName = v.display;
+      _renderNameBar();
+    });
+  }).catch(function() { fail('Couldn’t save — try again.'); });
+}
+
 // ─── Today's board (daily leaderboard + personal best / streak) ──────────────
 // Scores go to a per-era collection (ERA_CONFIG.fbColl / fbCollHard), so Hard
 // Mode and each era rank separately.
@@ -6013,20 +6214,26 @@ function _renderBoard(el, wins, saveRes, stats) {
     html += '<div class="lb-list">';
     for (var i = 0; i < stats.top10.length && i < 5; i++) {
       var s = stats.top10[i];
-      // Anonymous uids — the only identity we can honestly show is "You".
       // Match on uid alone: top10 is deduped to each player's *best* score, so
       // an earlier, higher run of yours today won't equal this game's wins.
       var isMe = !mine && !!window._fbUid && s.uid === window._fbUid;
       if (isMe) mine = true;
+      // Names are player-supplied — always escape, and re-check the filter on
+      // read so anything that slipped past the client on write still renders
+      // as Anonymous here.
+      var label = (s.name && _isCleanName(s.name)) ? esc(String(s.name).slice(0, 16)) : 'Anonymous';
+      if (isMe) label = label === 'Anonymous' ? 'You' : label + ' <span class="lb-you-tag">you</span>';
       html += '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '">'
         + '<span class="lb-rank">' + (i + 1) + '</span>'
-        + '<span class="lb-name">' + (isMe ? 'You' : 'Anonymous') + '</span>'
+        + '<span class="lb-name">' + label + '</span>'
         + '<span class="lb-wins">' + s.wins + '–' + (162 - s.wins) + '</span>'
         + '</div>';
     }
     html += '</div>';
   }
+  html += '<div class="lb-name-bar" id="lb-name-bar"></div>';
   el.innerHTML = html;
+  _renderNameBar();
 }
 
 function _updateLeaderboard(wins) {
