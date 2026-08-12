@@ -968,42 +968,9 @@ body.era-deadball .era-desc-note { display: block; }
 }
 .hard-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; white-space: nowrap; }
 .hard-toggle:has(input:checked) .hard-toggle-label { color: #f08080; }
-.vs-toggle {
-  display: flex; align-items: center; gap: 8px;
-  cursor: pointer; user-select: none;
-}
-.vs-toggle input { display: none; }
-.vs-toggle-track {
-  width: 38px; height: 21px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  position: relative;
-  transition: background .2s, border-color .2s;
-  flex-shrink: 0;
-}
-.vs-toggle input:checked ~ .vs-toggle-track {
-  background: rgba(201,164,74,0.22);
-  border-color: rgba(201,164,74,0.6);
-}
-.vs-toggle-thumb {
-  position: absolute;
-  top: 2px; left: 2px;
-  width: 15px; height: 15px;
-  background: var(--muted);
-  border-radius: 50%;
-  transition: transform .2s, background .2s;
-}
-.vs-toggle input:checked ~ .vs-toggle-track .vs-toggle-thumb {
-  transform: translateX(17px);
-  background: var(--gold);
-}
-.vs-toggle-label { font-size: 12px; font-weight: 700; color: var(--muted); transition: color .2s; white-space: nowrap; }
-.vs-toggle:has(input:checked) .vs-toggle-label { color: var(--gold); }
 .era-panel.era-locked .era-tab:not(.active) { opacity: 0.3; pointer-events: none; }
 .era-panel.era-locked #era-slider-wrap { opacity: 0.3; pointer-events: none; }
 .era-panel.era-locked .era-snap-card:not(.esc-active) { opacity: 0.3; pointer-events: none; }
-.era-panel.era-locked .vs-toggle { opacity: 0.5; pointer-events: none; }
 .era-lock-note {
   display: none;
   font-size: 10px; color: var(--era-accent);
@@ -1011,16 +978,6 @@ body.era-deadball .era-desc-note { display: block; }
   font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
 }
 .era-panel.era-locked .era-lock-note { display: block; }
-.vs-info {
-  display: none;
-  font-size: 11px; color: var(--muted);
-  padding: 8px 20px 0;
-  line-height: 1.5;
-  border-top: 1px solid var(--border);
-  margin-top: 4px;
-}
-.vs-info.visible { display: block; }
-.vs-info strong { color: var(--gold); }
 .era-start-btn {
   margin-left: auto;
   padding: 11px 28px;
@@ -1445,20 +1402,12 @@ body.era-deadball::after {
     </div>
     <div class="era-lock-note" id="era-lock-note"></div>
     <div class="era-actions">
-      <label class="vs-toggle" onclick="toggleVsInfo()">
-        <input type="checkbox" id="vs-mode-toggle">
-        <span class="vs-toggle-track"><span class="vs-toggle-thumb"></span></span>
-        <span class="vs-toggle-label">⚔ H2H</span>
-      </label>
       <label class="hard-toggle">
         <input type="checkbox" id="hard-mode-toggle">
         <span class="hard-toggle-track"><span class="hard-toggle-thumb"></span></span>
         <span class="hard-toggle-label">☠ Hard Mode</span>
       </label>
       <button class="era-start-btn" onclick="startSelectedEra()">▶ Start</button>
-    </div>
-    <div class="vs-info" id="vs-info-box">
-      <strong>Head-to-Head — how it works:</strong> Finish your game, then send the challenge link to a friend. They build their own lineup from the same era — and the moment they play, the <strong>duel report</strong> shows up right here on your home screen, slot by slot.
     </div>
   </div>
 
@@ -1631,6 +1580,16 @@ body.era-deadball::after {
     <div class="result-tagline" id="result-tagline"></div>
   </div>
 
+  <div class="results-btns">
+    <button class="challenge-btn" id="challenge-btn" onclick="shareChallenge()" style="display:none">&#x2694; Challenge a Friend</button>
+    <button class="play-again-btn" onclick="resetGame()">Play Again</button>
+    <button class="share-btn" onclick="shareScore()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.258 5.63 5.906-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      Share Score
+    </button>
+    <button class="copy-btn" id="copy-btn" onclick="copyScore()">📤 Share</button>
+  </div>
+
   <div class="card">
     <div class="lv-tabs">
       <button class="lv-tab lv-tab-active" id="lv-tab-lineup" onclick="setLineupView('lineup')">Lineup</button>
@@ -1652,15 +1611,6 @@ body.era-deadball::after {
   <div id="vs-result"></div>
   <div style="padding:10px 0 4px">
 <div id="fl-origins"></div>
-  </div>
-  <div class="results-btns">
-    <button class="challenge-btn" id="challenge-btn" onclick="shareChallenge()" style="display:none">&#x2694; Challenge a Friend</button>
-    <button class="play-again-btn" onclick="resetGame()">Play Again</button>
-    <button class="share-btn" onclick="shareScore()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.258 5.63 5.906-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      Share Score
-    </button>
-    <button class="copy-btn" id="copy-btn" onclick="copyScore()">📤 Share</button>
   </div>
 </div>
 
@@ -5113,21 +5063,12 @@ function selectEra(eraKey) {
   _updateEscArrows();
 }
 
-function toggleVsInfo() {
-  var cb = document.getElementById('vs-mode-toggle');
-  var box = document.getElementById('vs-info-box');
-  setTimeout(function() {
-    if (box) box.classList.toggle('visible', cb.checked);
-  }, 0);
-}
-
 function startSelectedEra() {
   var hard = document.getElementById('hard-mode-toggle').checked;
   if (_vsChallenge && _vsChallenge._id) {
     startGameWithEra(_vsChallenge.era, hard, true);
   } else {
-    var vs = document.getElementById('vs-mode-toggle').checked;
-    startGameWithEra(_selectedEra, hard, vs);
+    startGameWithEra(_selectedEra, hard, false);
   }
 }
 
@@ -6295,8 +6236,6 @@ function showScreen(name) {
     if (_ep) _ep.classList.remove('era-locked');
     var _sb = document.querySelector('.era-start-btn');
     if (_sb) _sb.textContent = '► Start';
-    var _vt = document.getElementById('vs-mode-toggle');
-    if (_vt) _vt.disabled = false;
     buildEraSlider();
     buildEraSnap();
     selectEra(_selectedEra || 'modern');
@@ -6944,10 +6883,6 @@ function _showVsBanner() {
     if (_ln) _ln.textContent = '\u{1F512} Era locked: '+(_ERA_LBL[_vsChallenge.era]||_vsChallenge.era);
     var _sb2 = document.querySelector('.era-start-btn');
     if (_sb2) _sb2.textContent = '► Accept & Play';
-    var _vt2 = document.getElementById('vs-mode-toggle');
-    if (_vt2) { _vt2.checked = true; _vt2.disabled = true; }
-    var _vi = document.getElementById('vs-info-box');
-    if (_vi) _vi.style.display = 'none';
     return;
   }
   if (_h2hOwnWaiting) {
