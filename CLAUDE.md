@@ -208,7 +208,7 @@ Both players keep a local entry in localStorage `mr-h2h-games`:
 Key functions (single JS module after `// ─── Head-to-Head (1v1)` header): `_h2hGames/_h2hUpsert`, `_loadFirebaseChallenge`, `_h2hSync`, `shareChallenge`, `respondToChallenge`, `_renderVsResult`, `_showVsBanner`, `_renderVsHub`, `_duelReportHtml`.
 Legacy base64 `#vs=` links (pre-Firebase) are no longer parsed.
 
-**⚠ Firestore rules must allow the `challenges` collection.** As of 2026-07-06 the console rules deny ALL access (verified via REST: PERMISSION_DENIED on create/get/update) — the backend never worked. Required addition inside `match /databases/{database}/documents { }` (keep existing scores/users rules):
+**✅ Firestore rules for `challenges` are live and verified** (re-tested via REST 2026-08-12 — supersedes the old 2026-07-06 "deny ALL access" note). Confirmed working end to end: anonymous auth → sender create → responder merge (different uid) → unauthenticated read-back. Confirmed correctly denied: a second response once `p2wins` is set (so replay-until-you-win is blocked server-side, not just in the UI), any edit to the sender's `wins`, and delete. Current rules inside `match /databases/{database}/documents { }` (alongside the scores/users rules):
 
 ```
 match /challenges/{id} {
