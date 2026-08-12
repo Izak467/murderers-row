@@ -5903,8 +5903,12 @@ function showResults() {
   if (vsBadgeEl) vsBadgeEl.style.display = S.vsMode ? 'inline-flex' : 'none';
   var chalBtn = document.getElementById('challenge-btn');
   if (chalBtn) {
-    chalBtn.style.display = (!S.vsMode && !_vsChallenge && !_vsDuel && !S._h2hSentId) ? '' : 'none';
+    var chalShown = !S.vsMode && !_vsChallenge && !_vsDuel && !S._h2hSentId;
+    chalBtn.style.display = chalShown ? '' : 'none';
     chalBtn.textContent = '\u2694 Challenge a Friend';
+    // Pre-create the Firebase doc in the background so a later tap can open
+    // the native share sheet synchronously (see _h2hPrepare).
+    if (chalShown) _h2hPrepare();
   }
   var eraBadgeEl = document.getElementById('era-badge');
   if (eraBadgeEl) {
@@ -6643,30 +6647,42 @@ function _h2hPrepare() {
 }
 
 function shareChallenge() {
+  if (_h2hPreparing) { setTimeout(shareChallenge, 150); return; }
   var data = _buildChallengeData(); if (!data) return;
   var btn = document.getElementById('h2h-send-btn') || document.getElementById('challenge-btn');
-  function _finish(id) {
+  var origLabel = btn ? btn.textContent : '';
+  function _markSent(id) {
     _h2hUpsert({ id:id, role:'sender', era:data.era, myW:data.wins, oppW:null, oppEra:null,
       status:'waiting', seen:true, label:_h2hMkLabel(data.era), ts:Date.now(), doc:null });
     S._h2hSentId = id;
     _renderVsHub(); _renderVsResult();
     var cb = document.getElementById('challenge-btn');
     if (cb) cb.style.display = 'none';
+  }
+  function _doShare(id) {
     var url = _h2hShareUrl(id, data.era);
     var text = 'I challenge you to a '+(_ERA_LBL[data.era]||data.era)+' era duel in Murderers’ Row.';
-    if (navigator.share) { navigator.share({title:'Murderers’ Row — Head-to-Head',text:text,url:url}).catch(function(){}); }
-    else {
+    if (navigator.share) {
+      // Only counts as sent once the user actually picks a target in the share sheet —
+      // backing out (AbortError) or a share failure leaves the button as-is to retry.
+      navigator.share({title:'Murderers’ Row — Head-to-Head',text:text,url:url}).then(function() {
+        _markSent(id);
+      }).catch(function() {
+        if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+      });
+    } else {
       _copyFallback(url);
+      _markSent(id);
       var cbtn = document.getElementById('h2h-copy-btn');
       if (cbtn) cbtn.textContent = '✓ Link copied — paste it to your rival!';
     }
   }
-  if (S._h2hPreparedId) { _finish(S._h2hPreparedId); return; }
+  if (S._h2hPreparedId) { _doShare(S._h2hPreparedId); return; }
   if (!window._fbSaveChallenge) { if(btn){btn.textContent='Offline — try again';} return; }
   if (btn) { btn.disabled = true; btn.textContent = 'Creating game…'; }
   window._fbSaveChallenge(data).then(function(id) {
     if (btn) btn.disabled = false;
-    _finish(id);
+    _doShare(id);
   }).catch(function(e) {
     console.error('H2H save failed', e);
     if (btn) { btn.disabled=false; btn.textContent='Error — tap to retry'; }
