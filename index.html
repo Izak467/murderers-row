@@ -704,19 +704,21 @@ body::before {
 .lb-wins { font-weight: 700; color: var(--cream); font-variant-numeric: tabular-nums; }
 .lb-pb-flag { display: inline-block; font-size: 8px; font-weight: 800; letter-spacing: 1px; color: #0d1b2a; background: var(--gold); border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
 .lb-you-tag { font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #0d1b2a; background: var(--gold); border-radius: 3px; padding: 1px 4px; margin-left: 5px; }
-.lb-name-bar { font-size: 11px; color: var(--muted); padding: 10px 2px 2px; margin-top: 6px; border-top: 1px solid var(--border); }
+.lb-name-bar { font-size: 13px; color: var(--muted); padding: 10px 2px 2px; margin-top: 6px; border-top: 1px solid var(--border); }
 /* On the landing hero there's already a rule under the tagline — no second one. */
 .landing-name-bar { border-top: none; margin-top: 12px; padding: 0; }
 .landing-name-bar .lb-name-form { max-width: 380px; }
 .lb-name-bar strong { color: var(--cream-dim); }
-.lb-name-link { background: none; border: none; color: var(--gold); font-size: 11px; font-weight: 700; cursor: pointer; padding: 2px 4px; text-decoration: underline; }
+.lb-name-link { background: none; border: none; color: var(--gold); font-size: 13px; font-weight: 700; cursor: pointer; padding: 5px 6px; text-decoration: underline; font-family: inherit; }
 .lb-name-link:hover { color: var(--gold-lt); }
 .lb-name-form { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.lb-name-input { flex: 1 1 140px; min-width: 120px; padding: 7px 9px; background: var(--bg); color: var(--cream); border: 1px solid var(--border-lt); border-radius: 6px; font-size: 13px; font-family: inherit; }
+/* font-size MUST stay >= 16px: iOS Safari auto-zooms a focused input below
+   that and never zooms back out, stranding the player mid-page. */
+.lb-name-input { flex: 1 1 150px; min-width: 130px; padding: 9px 10px; background: var(--bg); color: var(--cream); border: 1px solid var(--border-lt); border-radius: 6px; font-size: 16px; font-family: inherit; }
 .lb-name-input:focus { outline: none; border-color: var(--gold-dk); }
-.lb-name-save { padding: 7px 14px; background: var(--gold); color: #0d1b2a; border: none; border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer; }
+.lb-name-save { padding: 9px 16px; background: var(--gold); color: #0d1b2a; border: none; border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer; font-family: inherit; }
 .lb-name-save:disabled { opacity: .6; cursor: default; }
-.lb-name-msg { flex: 1 0 100%; font-size: 11px; color: var(--muted); min-height: 14px; }
+.lb-name-msg { flex: 1 0 100%; font-size: 12px; color: var(--muted); min-height: 15px; }
 .lb-name-msg.err { color: #f08080; }
 .res-divider:first-child { border-top: none; padding-top: 0; margin-top: 0; }
 
@@ -1483,7 +1485,7 @@ body.era-deadball::after {
   <div class="hero">
     <div class="hero-title"><span>Murderers'</span> Row</div>
     <div class="hero-tagline">The lineup history never got to see.</div>
-    <div class="hero-sub">Build the most feared lineup in baseball history · Choose your era</div>
+    <div class="hero-sub">Build the most feared lineup in baseball history</div>
     <div class="lb-name-bar landing-name-bar" id="landing-name-bar"></div>
   </div>
 
