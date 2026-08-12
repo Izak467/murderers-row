@@ -47,24 +47,16 @@
   <rect x="110" y="392" width="580" height="3" fill="url(#gold)" rx="2"/>
 
   <!-- Tagline -->
-  <text x="110" y="450"
+  <text x="110" y="455"
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
-        font-size="32"
-        font-weight="400"
-        letter-spacing="3"
-        fill="#b8b0a0">CAN YOU GO 162–0?</text>
-
-  <!-- Sub-tagline -->
-  <text x="110" y="500"
-        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
-        font-size="22"
+        font-size="26"
         font-weight="400"
         letter-spacing="1"
-        fill="#6a82a0">Build the most feared lineup in baseball history · 2005–2025</text>
+        fill="#b8b0a0">Build the most feared lineup in baseball history · 2005–2025</text>
 
   <!-- URL badge -->
-  <rect x="110" y="548" width="390" height="44" rx="8" fill="#132540" stroke="#2c4a6a" stroke-width="1.5"/>
-  <text x="305" y="576"
+  <rect x="110" y="500" width="390" height="44" rx="8" fill="#132540" stroke="#2c4a6a" stroke-width="1.5"/>
+  <text x="305" y="528"
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
         font-size="18"
         font-weight="600"
