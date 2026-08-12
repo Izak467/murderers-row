@@ -90,10 +90,14 @@
       String(today.getMonth()+1).padStart(2,'0') + '-' +
       String(today.getDate()).padStart(2,'0');
 
-    var q = query(collection(db, coll), where('date','==',dateStr), orderBy('wins','desc'));
+    // Equality filter only — adding orderBy('wins') server-side would need a
+    // composite (date, wins) index in each of the 12 era/hard collections, and
+    // buys nothing: we already read the whole day to compute total/rank/pct.
+    var q = query(collection(db, coll), where('date','==',dateStr));
     var snap = await getDocs(q);
     var scores = [];
     snap.forEach(function(d) { scores.push(d.data()); });
+    scores.sort(function(a, b) { return (b.wins || 0) - (a.wins || 0); });
 
     var total = scores.length;
     var below = scores.filter(function(s) { return s.wins < myWins; }).length;
@@ -620,6 +624,25 @@ body::before {
 
 /* Results section dividers */
 .res-divider { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 16px 0 8px; border-top: 1px solid var(--border); margin-top: 12px; display: flex; align-items: center; gap: 8px; }
+
+/* ─── Today's board (daily leaderboard + PB/streak) ───────────── */
+.lb-note { font-size: 11px; color: var(--muted); padding: 4px 0 2px; }
+.lb-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 10px; }
+@media (max-width: 520px) { .lb-stats { grid-template-columns: repeat(2, 1fr); } }
+.lb-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 9px 6px; text-align: center; }
+.lb-stat-val { font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: var(--cream); line-height: 1.1; }
+.lb-stat-val.hl { color: var(--gold); }
+.lb-stat-lbl { font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+.lb-list { display: flex; flex-direction: column; }
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.lb-row:last-child { border-bottom: none; }
+.lb-row-me { background: rgba(201,164,74,.10); border-radius: 5px; }
+.lb-rank { width: 26px; font-weight: 800; color: var(--muted); font-size: 11px; }
+.lb-row-me .lb-rank { color: var(--gold); }
+.lb-name { flex: 1; color: var(--cream-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-row-me .lb-name { color: var(--gold); font-weight: 700; }
+.lb-wins { font-weight: 700; color: var(--cream); font-variant-numeric: tabular-nums; }
+.lb-pb-flag { display: inline-block; font-size: 8px; font-weight: 800; letter-spacing: 1px; color: #0d1b2a; background: var(--gold); border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
 .res-divider:first-child { border-top: none; padding-top: 0; margin-top: 0; }
 
 /* Aggregate big numbers */
@@ -1627,6 +1650,8 @@ body.era-deadball::after {
     </div>
     <div id="dash-lineup"></div>
     <div id="batting-order-reveal" style="display:none"></div>
+    <div class="res-divider" id="board-divider" style="display:none">Today's Board</div>
+    <div id="dash-board" style="display:none"></div>
     <div class="res-divider">Performance Matrix</div>
     <div id="dash-matrix"></div>
     <div class="res-divider">Team Totals</div>
@@ -5934,6 +5959,101 @@ function setSort(col) {
   }
 }
 
+// ─── Today's board (daily leaderboard + personal best / streak) ──────────────
+// Scores go to a per-era collection (ERA_CONFIG.fbColl / fbCollHard), so Hard
+// Mode and each era rank separately.
+var _lbStats = null; // {rank,total,percentile} for the current result — feeds share text
+
+function _lbCollection() {
+  var cfg = ERA_CONFIG[S.era || 'modern'] || {};
+  return S.hardMode ? (cfg.fbCollHard || 'hardScores') : (cfg.fbColl || 'scores');
+}
+
+// Anonymous sign-in resolves async; _fbSaveScore hard-requires a uid.
+function _awaitUid(ms) {
+  return new Promise(function(resolve) {
+    if (window._fbUid) return resolve(window._fbUid);
+    var t0 = Date.now(), limit = ms || 6000;
+    var iv = setInterval(function() {
+      if (window._fbUid || Date.now() - t0 > limit) {
+        clearInterval(iv);
+        resolve(window._fbUid || null);
+      }
+    }, 120);
+  });
+}
+
+function _renderBoard(el, wins, saveRes, stats) {
+  var pct = stats.total > 1 ? stats.percentile + '%' : '—';
+  var pctLbl = stats.total > 1 ? 'Better Than' : 'First Today';
+  var pb = saveRes && saveRes.pb ? saveRes.pb : wins;
+  var streak = saveRes && saveRes.streak ? saveRes.streak : 1;
+  var isNewPB = !!(saveRes && saveRes.isNewPB);
+
+  var html = '<div class="lb-stats">'
+    + '<div class="lb-stat"><div class="lb-stat-val hl">#' + stats.rank + '</div><div class="lb-stat-lbl">Today’s Rank</div></div>'
+    + '<div class="lb-stat"><div class="lb-stat-val">' + pct + '</div><div class="lb-stat-lbl">' + pctLbl + '</div></div>'
+    + '<div class="lb-stat"><div class="lb-stat-val' + (isNewPB ? ' hl' : '') + '">' + pb + '</div><div class="lb-stat-lbl">Personal Best'
+    + (isNewPB ? '<span class="lb-pb-flag">NEW</span>' : '') + '</div></div>'
+    + '<div class="lb-stat"><div class="lb-stat-val">' + streak + '</div><div class="lb-stat-lbl">Day Streak</div></div>'
+    + '</div>';
+
+  html += '<div class="lb-note">' + stats.total + ' lineup' + (stats.total === 1 ? '' : 's')
+       + ' built today in this era.</div>';
+
+  if (stats.top10 && stats.top10.length) {
+    var mine = false;
+    html += '<div class="lb-list">';
+    for (var i = 0; i < stats.top10.length && i < 5; i++) {
+      var s = stats.top10[i];
+      // Anonymous uids — the only identity we can honestly show is "You".
+      var isMe = !mine && s.uid === window._fbUid && s.wins === wins;
+      if (isMe) mine = true;
+      html += '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '">'
+        + '<span class="lb-rank">' + (i + 1) + '</span>'
+        + '<span class="lb-name">' + (isMe ? 'You' : 'Anonymous') + '</span>'
+        + '<span class="lb-wins">' + s.wins + '–' + (162 - s.wins) + '</span>'
+        + '</div>';
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function _updateLeaderboard(wins) {
+  var div = document.getElementById('board-divider');
+  var el  = document.getElementById('dash-board');
+  _lbStats = null;
+  if (!div || !el) return;
+  function hide() { div.style.display = 'none'; el.style.display = 'none'; }
+  // Offline or Firebase blocked — the board just doesn't appear.
+  if (!window._fbSaveScore || !window._fbGetTodayStats) { hide(); return; }
+
+  var coll = _lbCollection();
+  var summary = [];
+  for (var i = 0; i < 9; i++) {
+    var s = S.lineup[i];
+    summary.push(s ? (s.player.name + ' ' + s.year) : null);
+  }
+
+  div.style.display = '';
+  el.style.display = '';
+  el.innerHTML = '<div class="lb-note">Saving your score…</div>';
+
+  _awaitUid().then(function(uid) {
+    if (!uid) { hide(); return null; }
+    return window._fbSaveScore(wins, summary, coll).then(function(saveRes) {
+      return window._fbGetTodayStats(wins, coll).then(function(stats) {
+        _lbStats = { rank: stats.rank, total: stats.total, percentile: stats.percentile };
+        _renderBoard(el, wins, saveRes, stats);
+      });
+    });
+  }).catch(function(e) {
+    console.warn('Leaderboard unavailable', e);
+    hide();
+  });
+}
+
 // ─── Results ────────────────────────────────────────────────────────────────
 function showResults() {
   showScreen('results');
@@ -5941,6 +6061,7 @@ function showResults() {
   var losses = 162 - res.wins;
   S.lastResult = res;
   saveToHistory(res.wins); _renderVsResult();
+  _updateLeaderboard(res.wins);
 
   var rec = document.getElementById('result-record');
   var recClass = res.wins===162 ? 'perfect' : res.wins>=130 ? 'transcendent' : res.wins>=115 ? 'dominant' : res.wins>=100 ? 'great' : res.wins>=87 ? 'good' : res.wins>=74 ? 'mediocre' : 'bad';
@@ -6445,12 +6566,19 @@ function switchDashTab(tab) {
   }
 }
 
+// Only brag about the percentile when enough people have played today for it
+// to mean anything.
+function _lbBrag() {
+  if (!_lbStats || _lbStats.total < 5) return '';
+  return ' Top ' + Math.max(1, 100 - _lbStats.percentile) + '% today.';
+}
+
 function shareScore() {
   if (!S.lastResult) return;
   var w = S.lastResult.wins;
   var l = 162 - w;
   var emoji = w === 162 ? '🏆' : w >= 140 ? '🔥' : w >= 110 ? '⚾' : '😤';
-  var text = emoji + ' I just built a ' + w + '–' + l + ' season in Murderers\' Row. Can you beat it?\n\nhttps://murderers-row.net/';
+  var text = emoji + ' I just built a ' + w + '–' + l + ' season in Murderers\' Row.' + _lbBrag() + ' Can you beat it?\n\nhttps://murderers-row.net/';
   window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
 }
 
@@ -6460,7 +6588,7 @@ function copyScore() {
   var w = S.lastResult.wins;
   var l = 162 - w;
   var e = w === 162 ? '🏆' : w >= 140 ? '🔥' : w >= 110 ? '⚾' : '😤';
-  var shareText = e + " I just built a " + w + "–" + l + " season in Murderers' Row. Can you beat my lineup?";
+  var shareText = e + " I just built a " + w + "–" + l + " season in Murderers' Row." + _lbBrag() + " Can you beat my lineup?";
   if (navigator.share) {
     navigator.share({ title: "Murderers' Row", text: shareText, url: url }).catch(function(){});
     return;
