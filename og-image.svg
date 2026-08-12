@@ -11,12 +11,12 @@
   </defs>
 
   <rect width="1200" height="630" fill="url(#bg)"/>
-  <line x1="0" y1="1" x2="1200" y2="1" stroke="#2c4a6a" stroke-width="1"/>
-  <line x1="0" y1="629" x2="1200" y2="629" stroke="#2c4a6a" stroke-width="1"/>
+  <line x1="0" y1="1" x2="1200" y2="1" stroke="#82a2da" stroke-width="1"/>
+  <line x1="0" y1="629" x2="1200" y2="629" stroke="#82a2da" stroke-width="1"/>
   <rect x="0" y="0" width="1200" height="6" fill="url(#gold)"/>
 
-  <circle cx="980" cy="315" r="220" fill="none" stroke="#2c4a6a" stroke-width="1.5" opacity="0.6"/>
-  <circle cx="980" cy="315" r="180" fill="none" stroke="#2c4a6a" stroke-width="1" opacity="0.4"/>
+  <circle cx="980" cy="315" r="220" fill="none" stroke="#82a2da" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="980" cy="315" r="180" fill="none" stroke="#82a2da" stroke-width="1" opacity="0.4"/>
   <text x="980" y="360" font-size="180" text-anchor="middle" opacity="0.18">&#9918;</text>
 
   <text x="110" y="240"
