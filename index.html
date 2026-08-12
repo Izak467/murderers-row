@@ -202,7 +202,71 @@ body::before {
 #app { width: 100%; max-width: 1000px; padding: 0 16px 80px; }
 
 .screen { display: none; flex-direction: column; gap: 24px; padding-top: 40px; }
-.screen.active { display: flex; }
+.screen.active { display: flex; animation: screen-in .3s cubic-bezier(.22,.61,.36,1) both; }
+
+/* ─── Motion: screen entrances, roster stagger, results cascade ───── */
+@keyframes screen-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Roster rows cascade in after a spin lands (see _rosterFresh in renderRoster) */
+@keyframes roster-row-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+.roster-stagger .player-rows > .player-row:nth-child(-n+14),
+.roster-stagger .roster-table tbody tr:nth-child(-n+14) {
+  animation: roster-row-in .34s cubic-bezier(.22,.61,.36,1) both;
+}
+.roster-stagger .player-rows > .player-row:nth-child(1),  .roster-stagger .roster-table tbody tr:nth-child(1)  { animation-delay: 0ms; }
+.roster-stagger .player-rows > .player-row:nth-child(2),  .roster-stagger .roster-table tbody tr:nth-child(2)  { animation-delay: 22ms; }
+.roster-stagger .player-rows > .player-row:nth-child(3),  .roster-stagger .roster-table tbody tr:nth-child(3)  { animation-delay: 44ms; }
+.roster-stagger .player-rows > .player-row:nth-child(4),  .roster-stagger .roster-table tbody tr:nth-child(4)  { animation-delay: 66ms; }
+.roster-stagger .player-rows > .player-row:nth-child(5),  .roster-stagger .roster-table tbody tr:nth-child(5)  { animation-delay: 88ms; }
+.roster-stagger .player-rows > .player-row:nth-child(6),  .roster-stagger .roster-table tbody tr:nth-child(6)  { animation-delay: 110ms; }
+.roster-stagger .player-rows > .player-row:nth-child(7),  .roster-stagger .roster-table tbody tr:nth-child(7)  { animation-delay: 132ms; }
+.roster-stagger .player-rows > .player-row:nth-child(8),  .roster-stagger .roster-table tbody tr:nth-child(8)  { animation-delay: 154ms; }
+.roster-stagger .player-rows > .player-row:nth-child(9),  .roster-stagger .roster-table tbody tr:nth-child(9)  { animation-delay: 176ms; }
+.roster-stagger .player-rows > .player-row:nth-child(10), .roster-stagger .roster-table tbody tr:nth-child(10) { animation-delay: 198ms; }
+.roster-stagger .player-rows > .player-row:nth-child(11), .roster-stagger .roster-table tbody tr:nth-child(11) { animation-delay: 220ms; }
+.roster-stagger .player-rows > .player-row:nth-child(12), .roster-stagger .roster-table tbody tr:nth-child(12) { animation-delay: 242ms; }
+.roster-stagger .player-rows > .player-row:nth-child(13), .roster-stagger .roster-table tbody tr:nth-child(13) { animation-delay: 264ms; }
+.roster-stagger .player-rows > .player-row:nth-child(14), .roster-stagger .roster-table tbody tr:nth-child(14) { animation-delay: 286ms; }
+
+/* Results dashboard sections reveal top-down under the win counter */
+@keyframes res-section-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+.res-cascade > * { animation: res-section-in .4s cubic-bezier(.22,.61,.36,1) both; }
+.res-cascade > *:nth-child(1)  { animation-delay: 60ms; }
+.res-cascade > *:nth-child(2)  { animation-delay: 120ms; }
+.res-cascade > *:nth-child(3)  { animation-delay: 180ms; }
+.res-cascade > *:nth-child(4)  { animation-delay: 240ms; }
+.res-cascade > *:nth-child(5)  { animation-delay: 300ms; }
+.res-cascade > *:nth-child(6)  { animation-delay: 360ms; }
+.res-cascade > *:nth-child(7)  { animation-delay: 420ms; }
+.res-cascade > *:nth-child(8)  { animation-delay: 480ms; }
+.res-cascade > *:nth-child(9)  { animation-delay: 540ms; }
+.res-cascade > *:nth-child(10) { animation-delay: 600ms; }
+.res-cascade > *:nth-child(n+11) { animation-delay: 660ms; }
+
+/* Player → slot flight: ghost chip that arcs from the picked row into its slot */
+.pick-ghost {
+  position: fixed; z-index: 8000; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  padding: 4px 10px; border-radius: 6px;
+  background: var(--surface2); border: 1px solid var(--gold);
+  color: var(--cream); font-size: 11px; font-weight: 700;
+  white-space: nowrap; overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    /* Negative delay so staggered rows/sections are already past their start —
+       without this they'd hold at opacity 0 for the full delay, then pop. */
+    animation-delay: -1ms !important;
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* ─── Landing ─────────────────────────────────────────────── */
 .hero { border-bottom: 2px solid var(--gold-dk); padding-bottom: 20px; }
@@ -1589,7 +1653,7 @@ body.era-deadball::after {
     <button class="copy-btn" id="copy-btn" onclick="copyScore()">📤 Share</button>
   </div>
 
-  <div class="card">
+  <div class="card res-cascade">
     <div class="lv-tabs">
       <button class="lv-tab lv-tab-active" id="lv-tab-lineup" onclick="setLineupView('lineup')">Lineup</button>
       <button class="lv-tab" id="lv-tab-batting" onclick="setLineupView('batting')">Batting Order</button>
@@ -4433,7 +4497,17 @@ var S = {
   posFilter:    [],   // position names to show; empty = all
   _pendingPos:  [],   // staged in dropdown before OK
   excludeDH:    false, // when true, DH doesn't count as "available" for Available Only / hasAvail
+  _rosterFresh: false, // true right after a spin lands — drives the one-shot roster stagger
 };
+
+// ─── Motion helpers ──────────────────────────────────────────────────────────
+// Checked live (not cached) so toggling the OS setting takes effect immediately.
+function _reduceMotion() {
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+function _scrollTop() {
+  window.scrollTo({ top: 0, behavior: _reduceMotion() ? 'auto' : 'smooth' });
+}
 
 function teamLogoUrl(abbr) {
   var REMAP = { 'CAL':'LAA', 'ANA':'LAA', 'FLA':'MIA' };
@@ -5141,6 +5215,51 @@ function sortedPlayers() {
   return players;
 }
 
+// ─── Pick → slot flight ──────────────────────────────────────────────────────
+// The row rect is captured on the capture phase, before the onclick handler
+// tears the roster down, so the ghost has a real origin to fly from.
+var _lastPickRect = null;
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  if (!t || !t.closest) return;
+  var btn = t.closest('.pos-assign-btn, .confirm-yes-btn');
+  if (!btn) return;
+  var row = btn.closest('.player-row, tr');
+  _lastPickRect = (row || btn).getBoundingClientRect();
+}, true);
+
+function _flyPickToSlot(name, slotEl) {
+  if (_reduceMotion() || !_lastPickRect || !slotEl || typeof slotEl.animate !== 'function') return;
+  var from = _lastPickRect, to = slotEl.getBoundingClientRect();
+  _lastPickRect = null;
+  if (!from.width || !to.width) return;
+
+  var ghost = document.createElement('div');
+  ghost.className = 'pick-ghost';
+  ghost.textContent = (name || '').split(' ').slice(-1)[0] || name || '';
+  ghost.style.left = from.left + 'px';
+  ghost.style.top = from.top + 'px';
+  ghost.style.width = Math.min(from.width, 180) + 'px';
+  ghost.style.height = Math.max(22, Math.min(from.height, 40)) + 'px';
+  document.body.appendChild(ghost);
+
+  var g = ghost.getBoundingClientRect();
+  var dx = (to.left + to.width / 2) - (g.left + g.width / 2);
+  var dy = (to.top + to.height / 2) - (g.top + g.height / 2);
+  var scale = Math.max(0.35, Math.min(1, to.width / Math.max(g.width, 1)));
+
+  var anim = ghost.animate([
+    { transform: 'translate(0,0) scale(1)', opacity: 1 },
+    { transform: 'translate(' + (dx * 0.55) + 'px,' + (dy * 0.55 - 26) + 'px) scale(' + ((1 + scale) / 2) + ')', opacity: 1, offset: 0.6 },
+    { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ')', opacity: 0 }
+  ], { duration: 440, easing: 'cubic-bezier(.4,.05,.3,1)' });
+
+  function cleanup() { if (ghost.parentNode) ghost.parentNode.removeChild(ghost); }
+  anim.onfinish = cleanup;
+  anim.oncancel = cleanup;
+  setTimeout(cleanup, 900); // belt-and-braces if the tab was backgrounded
+}
+
 // ─── Actions ─────────────────────────────────────────────────────────────────
 function assignPlayer(player, posIdx) {
   if (S.lineup[posIdx] !== null) return;
@@ -5165,9 +5284,10 @@ function assignPlayer(player, posIdx) {
   if (roundEl) roundEl.textContent = S.round + 1;
   renderLineup();
   renderMoveToken();
-  // Flash the slot that was just filled
+  // Fly the pick into its slot, then flash the slot that was just filled
   var slots = document.querySelectorAll('.lineup-bar .ls');
   if (slots[posIdx]) {
+    _flyPickToSlot(player.name, slots[posIdx]);
     slots[posIdx].classList.remove('just-filled');
     void slots[posIdx].offsetWidth;
     slots[posIdx].classList.add('just-filled');
@@ -5410,6 +5530,7 @@ function loadRoster() {
     S.loadError = 'Could not load ' + esc(S.spin.teamName) + ' ' + year + ' roster. Try a skip.';
   }).then(function() {
     S.loading = false;
+    S._rosterFresh = true; // one-shot: stagger these rows in, but not later re-sorts
     refreshSkipBtns();
     renderRoster();
   });
@@ -5660,6 +5781,11 @@ function renderRoster() {
     }
     body.innerHTML = '<div class="table-wrap"><table class="roster-table">'+thead+'<tbody>'+rows+'</tbody></table></div>';
   }
+
+  // One-shot stagger: only the first render after a spin lands cascades the rows
+  // in — re-sorts, filters and pending-assign re-renders stay instant.
+  body.classList.toggle('roster-stagger', !!S._rosterFresh && !_reduceMotion());
+  S._rosterFresh = false;
 
   // Store sorted players reference for click handler
   window._sortedPlayers = players;
@@ -5918,6 +6044,7 @@ function showResults() {
 
   function _fireCelebration(wins) {
     if (typeof confetti === 'undefined') return;
+    if (_reduceMotion()) return; // the 162-0 burst loops for 3.5s — never force that
     if (wins === 162) {
       var end = Date.now() + 3500;
       (function frame() {
@@ -5937,7 +6064,7 @@ function showResults() {
   // Animate win count up — slow dramatic deceleration into the final number
   var counter = { val: 0 };
   rec.textContent = '0–162';
-  if (typeof anime !== 'undefined') {
+  if (typeof anime !== 'undefined' && !_reduceMotion()) {
     anime({
       targets: counter,
       val: res.wins,
@@ -6232,7 +6359,7 @@ function showResults() {
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-'+name).classList.add('active');
-  window.scrollTo({top:0,behavior:'smooth'});
+  _scrollTop();
   if (name === 'landing') {
     // Unlock era panel (re-locked below if _vsChallenge is active)
     var _ep = document.querySelector('.era-panel');
