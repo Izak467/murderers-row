@@ -662,6 +662,29 @@ body::before {
 /* Results section dividers */
 .res-divider { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 16px 0 8px; border-top: 1px solid var(--border); margin-top: 12px; display: flex; align-items: center; gap: 8px; }
 
+/* Collapsible result sections — the deep-stat panels are collapsed by default
+   so the results screen opens at roughly half its old height. Preference is
+   remembered, so anyone who wants them open only expands once. */
+.res-fold { cursor: pointer; user-select: none; justify-content: space-between; }
+.res-fold:hover { color: var(--cream-dim); }
+.fold-chev { font-size: 11px; color: var(--muted); transition: transform .18s; margin-left: auto; }
+.res-fold.open .fold-chev { transform: rotate(180deg); }
+.fold-body { display: none; }
+.fold-body.open { display: block; }
+/* Fold bodies are cascade children, so they'd inherit an entrance delay of up
+   to 660ms — fine on first paint, but a visible lag when *you* tap to expand.
+   Toggling should feel instant. */
+.res-cascade > .fold-body { animation: none; }
+
+/* Rank/percentile summary in the hero, beside the share buttons — the brag
+   belongs next to the button that shares it, not 600px down the page. */
+.rank-line {
+  margin-top: 10px; font-size: 12px; font-weight: 700;
+  letter-spacing: .5px; color: var(--muted);
+}
+.rank-line .rk { color: var(--gold); }
+.rank-line .sep { opacity: .5; margin: 0 6px; }
+
 /* ─── Today's board (daily leaderboard + PB/streak) ───────────── */
 .lb-note { font-size: 11px; color: var(--muted); padding: 4px 0 2px; }
 .lb-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 10px; }
@@ -1684,6 +1707,7 @@ body.era-deadball::after {
   <div class="results-hero">
     <div class="result-record" id="result-record"></div>
     <div class="result-tagline" id="result-tagline"></div>
+    <div class="rank-line" id="rank-line" style="display:none"></div>
   </div>
 
   <div class="results-btns">
@@ -1703,17 +1727,24 @@ body.era-deadball::after {
     </div>
     <div id="dash-lineup"></div>
     <div id="batting-order-reveal" style="display:none"></div>
+
+    <div class="res-divider res-fold" data-fold="totals" onclick="toggleFold('totals')">Team Totals<span class="fold-chev">▾</span></div>
+    <div class="fold-body" data-foldbody="totals">
+      <div class="agg-row" id="agg-row"></div>
+      <div class="sb-total" id="sb-total"></div>
+    </div>
+
+    <div class="res-divider res-fold" data-fold="matrix" onclick="toggleFold('matrix')">Performance Matrix<span class="fold-chev">▾</span></div>
+    <div class="fold-body" data-foldbody="matrix"><div id="dash-matrix"></div></div>
+
+    <div class="res-divider res-fold" data-fold="plot" onclick="toggleFold('plot')">Patience vs Power<span class="fold-chev">▾</span></div>
+    <div class="fold-body" data-foldbody="plot"><div id="dash-plot"></div></div>
+
+    <div class="res-divider res-fold" data-fold="leaders" onclick="toggleFold('leaders')">Leaders<span class="fold-chev">▾</span></div>
+    <div class="fold-body" data-foldbody="leaders"><div id="dash-leaders"></div></div>
+
     <div class="res-divider" id="board-divider" style="display:none">Today's Board</div>
     <div id="dash-board" style="display:none"></div>
-    <div class="res-divider">Performance Matrix</div>
-    <div id="dash-matrix"></div>
-    <div class="res-divider">Team Totals</div>
-    <div class="agg-row" id="agg-row"></div>
-    <div class="sb-total" id="sb-total"></div>
-    <div class="res-divider">Patience vs Power</div>
-    <div id="dash-plot"></div>
-    <div class="res-divider">Leaders</div>
-    <div id="dash-leaders"></div>
   </div>
 
   <div id="vs-result"></div>
@@ -6184,6 +6215,35 @@ function _submitName() {
   }).catch(function() { fail('Couldn’t save — try again.'); });
 }
 
+// ─── Collapsible result sections ─────────────────────────────────────────────
+var FOLD_KEY = 'mr-folds';
+function _foldState() {
+  try { return JSON.parse(localStorage.getItem(FOLD_KEY) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function _foldSave(s) { try { localStorage.setItem(FOLD_KEY, JSON.stringify(s)); } catch (e) {} }
+
+function _applyFold(key, open) {
+  var hdr  = document.querySelector('.res-fold[data-fold="' + key + '"]');
+  var body = document.querySelector('.fold-body[data-foldbody="' + key + '"]');
+  if (hdr)  hdr.classList.toggle('open', open);
+  if (body) body.classList.toggle('open', open);
+}
+
+function toggleFold(key) {
+  var s = _foldState();
+  var open = !s[key];
+  s[key] = open;
+  _foldSave(s);
+  _applyFold(key, open);
+}
+
+// Collapsed unless the player has previously opened that section.
+function _initFolds() {
+  var s = _foldState();
+  ['totals', 'matrix', 'plot', 'leaders'].forEach(function(k) { _applyFold(k, !!s[k]); });
+}
+
 // ─── Today's board (daily leaderboard + personal best / streak) ──────────────
 // Scores go to a per-era collection (ERA_CONFIG.fbColl / fbCollHard), so Hard
 // Mode and each era rank separately.
@@ -6206,6 +6266,19 @@ function _awaitUid(ms) {
       }
     }, 120);
   });
+}
+
+// Compact hero summary — sits with the share buttons above the fold.
+function _renderRankLine(stats, saveRes) {
+  var el = document.getElementById('rank-line');
+  if (!el) return;
+  if (!stats) { el.style.display = 'none'; return; }
+  var bits = ['<span class="rk">#' + stats.rank + '</span> today'];
+  if (stats.total > 1) bits.push('top ' + Math.max(1, 100 - stats.percentile) + '%');
+  if (saveRes && saveRes.isNewPB) bits.push('<span class="rk">new best</span>');
+  else if (saveRes && saveRes.streak > 1) bits.push(saveRes.streak + '-day streak');
+  el.innerHTML = bits.join('<span class="sep">·</span>');
+  el.style.display = '';
 }
 
 function _renderBoard(el, wins, saveRes, stats) {
@@ -6258,7 +6331,10 @@ function _updateLeaderboard(wins) {
   var el  = document.getElementById('dash-board');
   _lbStats = null;
   if (!div || !el) return;
-  function hide() { div.style.display = 'none'; el.style.display = 'none'; }
+  function hide() {
+    div.style.display = 'none'; el.style.display = 'none';
+    _renderRankLine(null);
+  }
   // Offline or Firebase blocked — the board just doesn't appear.
   if (!window._fbSaveScore || !window._fbGetTodayStats) { hide(); return; }
 
@@ -6278,6 +6354,7 @@ function _updateLeaderboard(wins) {
     return window._fbSaveScore(wins, summary, coll).then(function(saveRes) {
       return window._fbGetTodayStats(wins, coll).then(function(stats) {
         _lbStats = { rank: stats.rank, total: stats.total, percentile: stats.percentile };
+        _renderRankLine(stats, saveRes);
         _renderBoard(el, wins, saveRes, stats);
       });
     });
@@ -6294,6 +6371,9 @@ function showResults() {
   var losses = 162 - res.wins;
   S.lastResult = res;
   saveToHistory(res.wins); _renderVsResult();
+  var _rl = document.getElementById('rank-line');
+  if (_rl) _rl.style.display = 'none'; // stays hidden until the board resolves
+  _initFolds();
   _updateLeaderboard(res.wins);
 
   var rec = document.getElementById('result-record');
