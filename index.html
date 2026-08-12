@@ -204,29 +204,8 @@ body::before {
 .screen { display: none; flex-direction: column; gap: 24px; padding-top: 40px; }
 .screen.active { display: flex; animation: screen-in .3s cubic-bezier(.22,.61,.36,1) both; }
 
-/* ─── Motion: screen entrances, roster stagger, results cascade ───── */
+/* ─── Motion: screen entrances, results cascade ───────────────────── */
 @keyframes screen-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-
-/* Roster rows cascade in after a spin lands (see _rosterFresh in renderRoster) */
-@keyframes roster-row-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
-.roster-stagger .player-rows > .player-row:nth-child(-n+14),
-.roster-stagger .roster-table tbody tr:nth-child(-n+14) {
-  animation: roster-row-in .34s cubic-bezier(.22,.61,.36,1) both;
-}
-.roster-stagger .player-rows > .player-row:nth-child(1),  .roster-stagger .roster-table tbody tr:nth-child(1)  { animation-delay: 0ms; }
-.roster-stagger .player-rows > .player-row:nth-child(2),  .roster-stagger .roster-table tbody tr:nth-child(2)  { animation-delay: 22ms; }
-.roster-stagger .player-rows > .player-row:nth-child(3),  .roster-stagger .roster-table tbody tr:nth-child(3)  { animation-delay: 44ms; }
-.roster-stagger .player-rows > .player-row:nth-child(4),  .roster-stagger .roster-table tbody tr:nth-child(4)  { animation-delay: 66ms; }
-.roster-stagger .player-rows > .player-row:nth-child(5),  .roster-stagger .roster-table tbody tr:nth-child(5)  { animation-delay: 88ms; }
-.roster-stagger .player-rows > .player-row:nth-child(6),  .roster-stagger .roster-table tbody tr:nth-child(6)  { animation-delay: 110ms; }
-.roster-stagger .player-rows > .player-row:nth-child(7),  .roster-stagger .roster-table tbody tr:nth-child(7)  { animation-delay: 132ms; }
-.roster-stagger .player-rows > .player-row:nth-child(8),  .roster-stagger .roster-table tbody tr:nth-child(8)  { animation-delay: 154ms; }
-.roster-stagger .player-rows > .player-row:nth-child(9),  .roster-stagger .roster-table tbody tr:nth-child(9)  { animation-delay: 176ms; }
-.roster-stagger .player-rows > .player-row:nth-child(10), .roster-stagger .roster-table tbody tr:nth-child(10) { animation-delay: 198ms; }
-.roster-stagger .player-rows > .player-row:nth-child(11), .roster-stagger .roster-table tbody tr:nth-child(11) { animation-delay: 220ms; }
-.roster-stagger .player-rows > .player-row:nth-child(12), .roster-stagger .roster-table tbody tr:nth-child(12) { animation-delay: 242ms; }
-.roster-stagger .player-rows > .player-row:nth-child(13), .roster-stagger .roster-table tbody tr:nth-child(13) { animation-delay: 264ms; }
-.roster-stagger .player-rows > .player-row:nth-child(14), .roster-stagger .roster-table tbody tr:nth-child(14) { animation-delay: 286ms; }
 
 /* Results dashboard sections reveal top-down under the win counter */
 @keyframes res-section-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
@@ -4485,7 +4464,6 @@ var S = {
   posFilter:    [],   // position names to show; empty = all
   _pendingPos:  [],   // staged in dropdown before OK
   excludeDH:    false, // when true, DH doesn't count as "available" for Available Only / hasAvail
-  _rosterFresh: false, // true right after a spin lands — drives the one-shot roster stagger
 };
 
 // ─── Motion helpers ──────────────────────────────────────────────────────────
@@ -5480,7 +5458,6 @@ function loadRoster() {
     S.loadError = 'Could not load ' + esc(S.spin.teamName) + ' ' + year + ' roster. Try a skip.';
   }).then(function() {
     S.loading = false;
-    S._rosterFresh = true; // one-shot: stagger these rows in, but not later re-sorts
     refreshSkipBtns();
     renderRoster();
   });
@@ -5731,11 +5708,6 @@ function renderRoster() {
     }
     body.innerHTML = '<div class="table-wrap"><table class="roster-table">'+thead+'<tbody>'+rows+'</tbody></table></div>';
   }
-
-  // One-shot stagger: only the first render after a spin lands cascades the rows
-  // in — re-sorts, filters and pending-assign re-renders stay instant.
-  body.classList.toggle('roster-stagger', !!S._rosterFresh && !_reduceMotion());
-  S._rosterFresh = false;
 
   // Store sorted players reference for click handler
   window._sortedPlayers = players;
