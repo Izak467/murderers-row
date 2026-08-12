@@ -5308,15 +5308,32 @@ function activateMove(slotIdx) {
 
 function completeMove(newPosIdx) {
   if (S.movingSlotIdx === -1) return;
-  var entry = S.lineup[S.movingSlotIdx];
+  var fromIdx = S.movingSlotIdx;
+  var entry = S.lineup[fromIdx];
+  // Grab the origin slot's rect before the re-render empties it. A move reads
+  // as slot → slot, so this overrides the row rect the click listener captured.
+  var slotsBefore = document.querySelectorAll('.lineup-bar .ls');
+  var fromRect = slotsBefore[fromIdx] ? slotsBefore[fromIdx].getBoundingClientRect() : null;
+
   S.lineup[newPosIdx] = entry;
-  S.lineup[S.movingSlotIdx] = null;
+  S.lineup[fromIdx] = null;
   S.moveToken = Math.max(0, S.moveToken - 1);
   S.movingSlotIdx = -1;
   renderLineup();
   renderMoveBanner();
   renderMoveToken();
   renderRoster();
+
+  var slots = document.querySelectorAll('.lineup-bar .ls');
+  if (slots[newPosIdx]) {
+    if (fromRect && entry && entry.player) {
+      _lastPickRect = fromRect;
+      _flyPickToSlot(entry.player.name, slots[newPosIdx]);
+    }
+    slots[newPosIdx].classList.remove('just-filled');
+    void slots[newPosIdx].offsetWidth;
+    slots[newPosIdx].classList.add('just-filled');
+  }
 }
 
 function cancelMove() {
