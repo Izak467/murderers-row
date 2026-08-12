@@ -10,24 +10,15 @@
     </linearGradient>
   </defs>
 
-  <!-- Background -->
   <rect width="1200" height="630" fill="url(#bg)"/>
-
-  <!-- Subtle grid lines -->
   <line x1="0" y1="1" x2="1200" y2="1" stroke="#2c4a6a" stroke-width="1"/>
   <line x1="0" y1="629" x2="1200" y2="629" stroke="#2c4a6a" stroke-width="1"/>
-
-  <!-- Gold accent bar top -->
   <rect x="0" y="0" width="1200" height="6" fill="url(#gold)"/>
 
-  <!-- Baseball stitching circle (decorative) -->
   <circle cx="980" cy="315" r="220" fill="none" stroke="#2c4a6a" stroke-width="1.5" opacity="0.6"/>
   <circle cx="980" cy="315" r="180" fill="none" stroke="#2c4a6a" stroke-width="1" opacity="0.4"/>
+  <text x="980" y="360" font-size="180" text-anchor="middle" opacity="0.18">&#9918;</text>
 
-  <!-- Baseball emoji large -->
-  <text x="980" y="360" font-size="180" text-anchor="middle" opacity="0.18">⚾</text>
-
-  <!-- "MURDERERS'" line -->
   <text x="110" y="240"
         font-family="Georgia, 'Times New Roman', serif"
         font-size="108"
@@ -35,7 +26,6 @@
         letter-spacing="-3"
         fill="url(#gold)">MURDERERS'</text>
 
-  <!-- "ROW" line -->
   <text x="110" y="360"
         font-family="Georgia, 'Times New Roman', serif"
         font-size="148"
@@ -43,23 +33,12 @@
         letter-spacing="-4"
         fill="#f0ece2">ROW</text>
 
-  <!-- Divider -->
   <rect x="110" y="392" width="580" height="3" fill="url(#gold)" rx="2"/>
 
-  <!-- Tagline -->
-  <text x="110" y="455"
+  <text x="110" y="450"
         font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
         font-size="26"
         font-weight="400"
         letter-spacing="1"
-        fill="#b8b0a0">Build the most feared lineup in baseball history · 2005–2025</text>
-
-  <!-- URL badge -->
-  <rect x="110" y="500" width="390" height="44" rx="8" fill="#132540" stroke="#2c4a6a" stroke-width="1.5"/>
-  <text x="305" y="528"
-        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
-        font-size="18"
-        font-weight="600"
-        text-anchor="middle"
-        fill="#6a82a0">izak467.github.io/murderers-row</text>
+        fill="#b8b0a0">Build the most feared lineup in baseball history</text>
 </svg>
