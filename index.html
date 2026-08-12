@@ -682,6 +682,9 @@ body::before {
 .lb-pb-flag { display: inline-block; font-size: 8px; font-weight: 800; letter-spacing: 1px; color: #0d1b2a; background: var(--gold); border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
 .lb-you-tag { font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #0d1b2a; background: var(--gold); border-radius: 3px; padding: 1px 4px; margin-left: 5px; }
 .lb-name-bar { font-size: 11px; color: var(--muted); padding: 10px 2px 2px; margin-top: 6px; border-top: 1px solid var(--border); }
+/* On the landing hero there's already a rule under the tagline — no second one. */
+.landing-name-bar { border-top: none; margin-top: 12px; padding: 0; }
+.landing-name-bar .lb-name-form { max-width: 380px; }
 .lb-name-bar strong { color: var(--cream-dim); }
 .lb-name-link { background: none; border: none; color: var(--gold); font-size: 11px; font-weight: 700; cursor: pointer; padding: 2px 4px; text-decoration: underline; }
 .lb-name-link:hover { color: var(--gold-lt); }
@@ -1458,6 +1461,7 @@ body.era-deadball::after {
     <div class="hero-title"><span>Murderers'</span> Row</div>
     <div class="hero-tagline">The lineup history never got to see.</div>
     <div class="hero-sub">Build the most feared lineup in baseball history · Choose your era</div>
+    <div class="lb-name-bar landing-name-bar" id="landing-name-bar"></div>
   </div>
 
   <div id="vs-hub" style="display:none" class="vs-hub"><div class="vs-hub-title">&#x2694; Head-to-Head Games</div><div id="vs-hub-list"></div></div>
@@ -6105,23 +6109,36 @@ function _storeName(o) {
 (function _initName() {
   var n = _loadName();
   if (n) window._mrName = n.display;
+  // The landing bar exists at parse time; the results one is built later.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { _renderNameBar(); });
+  } else {
+    _renderNameBar();
+  }
 })();
 
+// Two places can host the name control: the landing page (so a first-timer can
+// claim a handle *before* playing — otherwise their opening game saves as
+// Anonymous) and the results board. Only one form is open at a time, so the
+// input/message element ids stay unique.
+var _NAME_HOSTS = ['landing-name-bar', 'lb-name-bar'];
+
 function _renderNameBar() {
-  var el = document.getElementById('lb-name-bar');
-  if (!el) return;
   var n = _loadName();
-  if (n) {
-    el.innerHTML = 'Playing as <strong>' + esc(n.display) + '</strong> '
-      + '<button class="lb-name-link" onclick="_openNameForm()">change</button>';
-  } else {
-    el.innerHTML = 'Playing as <strong>Anonymous</strong> '
-      + '<button class="lb-name-link" onclick="_openNameForm()">pick a username</button>';
+  for (var i = 0; i < _NAME_HOSTS.length; i++) {
+    var el = document.getElementById(_NAME_HOSTS[i]);
+    if (!el) continue;
+    el.innerHTML = n
+      ? 'Playing as <strong>' + esc(n.display) + '</strong> '
+        + '<button class="lb-name-link" onclick="_openNameForm(\'' + _NAME_HOSTS[i] + '\')">change</button>'
+      : 'Playing as <strong>Anonymous</strong> '
+        + '<button class="lb-name-link" onclick="_openNameForm(\'' + _NAME_HOSTS[i] + '\')">pick a username</button>';
   }
 }
 
-function _openNameForm() {
-  var el = document.getElementById('lb-name-bar');
+function _openNameForm(hostId) {
+  _renderNameBar(); // collapse a form already open in the other host
+  var el = document.getElementById(hostId || 'lb-name-bar');
   if (!el) return;
   var cur = _loadName();
   el.innerHTML = '<div class="lb-name-form">'
@@ -6632,6 +6649,7 @@ function showScreen(name) {
     requestAnimationFrame(function() { _syncEraSnap(_selectedEra || 'modern', false); });
     _showVsBanner();
     _renderVsHub();
+    _renderNameBar();
   }
 }
 
