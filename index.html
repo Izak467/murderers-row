@@ -99,9 +99,16 @@
     snap.forEach(function(d) { scores.push(d.data()); });
     scores.sort(function(a, b) { return (b.wins || 0) - (a.wins || 0); });
 
-    var total = scores.length;
+    var total = scores.length;                 // includes the row we just saved
+    var others = Math.max(0, total - 1);
     var below = scores.filter(function(s) { return s.wins < myWins; }).length;
-    var percentile = total > 1 ? Math.round((below / (total-1)) * 100) : 100;
+    // Wins are integers, so ties are common. Counting only strictly-lower
+    // scores would put a 10-way tie at the 0th percentile despite ranking #1,
+    // so ties count as half — the standard midrank percentile.
+    var equalOthers = Math.max(0, scores.filter(function(s) { return s.wins === myWins; }).length - 1);
+    var percentile = others > 0
+      ? Math.max(0, Math.min(100, Math.round(((below + 0.5 * equalOthers) / others) * 100)))
+      : 100;
     var rank = scores.filter(function(s) { return s.wins > myWins; }).length + 1;
 
     // Top 10 unique users by best score today
@@ -6007,7 +6014,9 @@ function _renderBoard(el, wins, saveRes, stats) {
     for (var i = 0; i < stats.top10.length && i < 5; i++) {
       var s = stats.top10[i];
       // Anonymous uids — the only identity we can honestly show is "You".
-      var isMe = !mine && s.uid === window._fbUid && s.wins === wins;
+      // Match on uid alone: top10 is deduped to each player's *best* score, so
+      // an earlier, higher run of yours today won't equal this game's wins.
+      var isMe = !mine && !!window._fbUid && s.uid === window._fbUid;
       if (isMe) mine = true;
       html += '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '">'
         + '<span class="lb-rank">' + (i + 1) + '</span>'
@@ -6566,11 +6575,14 @@ function switchDashTab(tab) {
   }
 }
 
-// Only brag about the percentile when enough people have played today for it
-// to mean anything.
+// Only brag when enough people have played today for it to mean anything AND
+// the result is actually good — otherwise "Top 100% today" goes out to friends
+// reading as a boast when it means you finished last.
 function _lbBrag() {
   if (!_lbStats || _lbStats.total < 5) return '';
-  return ' Top ' + Math.max(1, 100 - _lbStats.percentile) + '% today.';
+  var top = 100 - _lbStats.percentile;
+  if (top > 50) return '';
+  return ' Top ' + Math.max(1, top) + '% today.';
 }
 
 function shareScore() {
