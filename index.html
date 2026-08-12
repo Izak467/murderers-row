@@ -243,18 +243,6 @@ body::before {
 .res-cascade > *:nth-child(10) { animation-delay: 600ms; }
 .res-cascade > *:nth-child(n+11) { animation-delay: 660ms; }
 
-/* Player → slot flight: ghost chip that arcs from the picked row into its slot */
-.pick-ghost {
-  position: fixed; z-index: 8000; pointer-events: none;
-  display: flex; align-items: center; justify-content: center;
-  padding: 4px 10px; border-radius: 6px;
-  background: var(--surface2); border: 1px solid var(--gold);
-  color: var(--cream); font-size: 11px; font-weight: 700;
-  white-space: nowrap; overflow: hidden;
-  box-shadow: 0 6px 20px rgba(0,0,0,.45);
-  will-change: transform, opacity;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
@@ -5215,51 +5203,6 @@ function sortedPlayers() {
   return players;
 }
 
-// ─── Pick → slot flight ──────────────────────────────────────────────────────
-// The row rect is captured on the capture phase, before the onclick handler
-// tears the roster down, so the ghost has a real origin to fly from.
-var _lastPickRect = null;
-document.addEventListener('click', function(e) {
-  var t = e.target;
-  if (!t || !t.closest) return;
-  var btn = t.closest('.pos-assign-btn, .confirm-yes-btn');
-  if (!btn) return;
-  var row = btn.closest('.player-row, tr');
-  _lastPickRect = (row || btn).getBoundingClientRect();
-}, true);
-
-function _flyPickToSlot(name, slotEl) {
-  if (_reduceMotion() || !_lastPickRect || !slotEl || typeof slotEl.animate !== 'function') return;
-  var from = _lastPickRect, to = slotEl.getBoundingClientRect();
-  _lastPickRect = null;
-  if (!from.width || !to.width) return;
-
-  var ghost = document.createElement('div');
-  ghost.className = 'pick-ghost';
-  ghost.textContent = (name || '').split(' ').slice(-1)[0] || name || '';
-  ghost.style.left = from.left + 'px';
-  ghost.style.top = from.top + 'px';
-  ghost.style.width = Math.min(from.width, 180) + 'px';
-  ghost.style.height = Math.max(22, Math.min(from.height, 40)) + 'px';
-  document.body.appendChild(ghost);
-
-  var g = ghost.getBoundingClientRect();
-  var dx = (to.left + to.width / 2) - (g.left + g.width / 2);
-  var dy = (to.top + to.height / 2) - (g.top + g.height / 2);
-  var scale = Math.max(0.35, Math.min(1, to.width / Math.max(g.width, 1)));
-
-  var anim = ghost.animate([
-    { transform: 'translate(0,0) scale(1)', opacity: 1 },
-    { transform: 'translate(' + (dx * 0.55) + 'px,' + (dy * 0.55 - 26) + 'px) scale(' + ((1 + scale) / 2) + ')', opacity: 1, offset: 0.6 },
-    { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ')', opacity: 0 }
-  ], { duration: 440, easing: 'cubic-bezier(.4,.05,.3,1)' });
-
-  function cleanup() { if (ghost.parentNode) ghost.parentNode.removeChild(ghost); }
-  anim.onfinish = cleanup;
-  anim.oncancel = cleanup;
-  setTimeout(cleanup, 900); // belt-and-braces if the tab was backgrounded
-}
-
 // ─── Actions ─────────────────────────────────────────────────────────────────
 function assignPlayer(player, posIdx) {
   if (S.lineup[posIdx] !== null) return;
@@ -5284,10 +5227,9 @@ function assignPlayer(player, posIdx) {
   if (roundEl) roundEl.textContent = S.round + 1;
   renderLineup();
   renderMoveToken();
-  // Fly the pick into its slot, then flash the slot that was just filled
+  // Flash the slot that was just filled
   var slots = document.querySelectorAll('.lineup-bar .ls');
   if (slots[posIdx]) {
-    _flyPickToSlot(player.name, slots[posIdx]);
     slots[posIdx].classList.remove('just-filled');
     void slots[posIdx].offsetWidth;
     slots[posIdx].classList.add('just-filled');
@@ -5308,15 +5250,9 @@ function activateMove(slotIdx) {
 
 function completeMove(newPosIdx) {
   if (S.movingSlotIdx === -1) return;
-  var fromIdx = S.movingSlotIdx;
-  var entry = S.lineup[fromIdx];
-  // Grab the origin slot's rect before the re-render empties it. A move reads
-  // as slot → slot, so this overrides the row rect the click listener captured.
-  var slotsBefore = document.querySelectorAll('.lineup-bar .ls');
-  var fromRect = slotsBefore[fromIdx] ? slotsBefore[fromIdx].getBoundingClientRect() : null;
-
+  var entry = S.lineup[S.movingSlotIdx];
   S.lineup[newPosIdx] = entry;
-  S.lineup[fromIdx] = null;
+  S.lineup[S.movingSlotIdx] = null;
   S.moveToken = Math.max(0, S.moveToken - 1);
   S.movingSlotIdx = -1;
   renderLineup();
@@ -5324,12 +5260,9 @@ function completeMove(newPosIdx) {
   renderMoveToken();
   renderRoster();
 
+  // Pulse the destination slot, same as a fresh pick does
   var slots = document.querySelectorAll('.lineup-bar .ls');
   if (slots[newPosIdx]) {
-    if (fromRect && entry && entry.player) {
-      _lastPickRect = fromRect;
-      _flyPickToSlot(entry.player.name, slots[newPosIdx]);
-    }
     slots[newPosIdx].classList.remove('just-filled');
     void slots[newPosIdx].offsetWidth;
     slots[newPosIdx].classList.add('just-filled');
