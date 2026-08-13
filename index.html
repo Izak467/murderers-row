@@ -7578,15 +7578,18 @@ function _boOrderIdxs() {
   return generateBattingOrder().map(function(p) { return p.idx; });
 }
 
+// Move, not swap. A batting order is a sequence: dropping your #6 hitter into
+// the leadoff spot should shift everyone else down one, not exile the old
+// leadoff man to 6th. Splice-out then splice-in gives that in both directions.
 function _boTap(pos) {
   if (S._boSel === -1) { S._boSel = pos; _renderBattingOrder(false); return; }
   if (S._boSel === pos) { S._boSel = -1; _renderBattingOrder(false); return; } // tap again to deselect
   var idxs = _boOrderIdxs();
-  var a = S._boSel, b = pos;
-  var tmp = idxs[a]; idxs[a] = idxs[b]; idxs[b] = tmp;
+  var moved = idxs.splice(S._boSel, 1)[0];
+  idxs.splice(pos, 0, moved);
   S._boOrder = idxs;
   S._boSel = -1;
-  _renderBattingOrder(false, [a, b]);
+  _renderBattingOrder(false, [pos]);
 }
 
 function _boReset() {
@@ -7627,7 +7630,7 @@ function _renderBattingOrder(stagger, pulse) {
   html += '<div class="bo-footer">'
     + (S._boOrder ? '<button class="bo-reset" onclick="_boReset()">↺ Reset order</button>' : '')
     + '<span class="bo-hint">'
-    + (S._boSel === -1 ? 'Tap two players to swap them' : 'Now tap who they swap with')
+    + (S._boSel === -1 ? 'Tap a player, then tap where they bat' : 'Now tap the spot to move them to')
     + '</span></div>';
 
   boEl.innerHTML = html;
