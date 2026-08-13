@@ -170,11 +170,11 @@ era alone, once it has been measured.
 ## Measured ceilings (p92) for the three tested eras
 
 ```
-wobaPlus   CEIL 1.21   FLOOR 1.00     (shared by every era)
+wobaPlus   CEIL 1.21   FLOOR 1.00     (shared; measured p92 = 1.211 / 1.218 / 1.211)
 
-postwar    tb 2470  hr 245  rbi 855  runs 840  sb 135
-golden     tb 2595  hr 197  rbi 950  runs 925  sb 138
-deadball   tb 2035  hr 400  rbi 665  runs 745  sb 300
+postwar    tb 2439  hr 236  rbi 820  runs 817  sb 115
+golden     tb 2544  hr 181  rbi 904  runs 897  sb 122
+deadball   tb 1971  hr 383  rbi 630  runs 721  sb 287
 ```
 
 Existing FLOORs for hr/rbi/runs/sb are unchanged. TB floor ≈ 55% of p01.
