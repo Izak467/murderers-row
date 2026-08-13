@@ -102,28 +102,44 @@
     snap.forEach(function(d) { scores.push(d.data()); });
     scores.sort(function(a, b) { return (b.wins || 0) - (a.wins || 0); });
 
-    var total = scores.length;                 // includes the row we just saved
-    var others = Math.max(0, total - 1);
-    var below = scores.filter(function(s) { return s.wins < myWins; }).length;
-    // Wins are integers, so ties are common. Counting only strictly-lower
-    // scores would put a 10-way tie at the 0th percentile despite ranking #1,
-    // so ties count as half — the standard midrank percentile.
-    var equalOthers = Math.max(0, scores.filter(function(s) { return s.wins === myWins; }).length - 1);
-    var percentile = others > 0
-      ? Math.max(0, Math.min(100, Math.round(((below + 0.5 * equalOthers) / others) * 100)))
-      : 100;
-    var rank = scores.filter(function(s) { return s.wins > myWins; }).length + 1;
-
-    // Top 10 unique users by best score today
-    var seen = {};
-    var top10 = [];
-    for (var i=0; i<scores.length; i++) {
+    // One entry per PLAYER, not per lineup — otherwise someone who played five
+    // times fills the board and their own earlier runs outrank them. `scores`
+    // is already sorted desc, so the first hit for a uid is that player's best.
+    // For the current player we substitute THIS game's score, so the board
+    // describes the run just finished rather than an earlier, better one.
+    var me = window._fbUid || null;
+    var seen = {}, board = [];
+    for (var i = 0; i < scores.length; i++) {
       var s = scores[i];
-      if (!seen[s.uid]) { seen[s.uid] = true; top10.push(s); }
-      if (top10.length >= 10) break;
+      var id = s.uid || ('anon' + i);
+      if (seen[id]) continue;
+      seen[id] = true;
+      board.push((me && s.uid === me)
+        ? { uid: s.uid, wins: myWins, name: window._mrName || s.name || null }
+        : s);
+    }
+    board.sort(function(a, b) { return (b.wins || 0) - (a.wins || 0); });
+
+    // Rank straight off the board so the tile and the list can never disagree.
+    var rank = 1;
+    for (var r = 0; r < board.length; r++) {
+      if (me && board[r].uid === me) { rank = r + 1; break; }
+      if (!me && board[r].wins <= myWins) { rank = r + 1; break; }
     }
 
-    return { percentile: percentile, rank: rank, total: total, top10: top10 };
+    // Percentile against the other players' best runs. Wins are integers so
+    // ties are common; they count as half (standard midrank percentile),
+    // otherwise a ten-way tie reads as 0th percentile while ranking #1.
+    var rivals = board.filter(function(e) { return !me || e.uid !== me; })
+                      .map(function(e) { return e.wins || 0; });
+    var below = rivals.filter(function(w) { return w < myWins; }).length;
+    var equal = rivals.filter(function(w) { return w === myWins; }).length;
+    var percentile = rivals.length
+      ? Math.max(0, Math.min(100, Math.round(((below + 0.5 * equal) / rivals.length) * 100)))
+      : 100;
+
+    return { percentile: percentile, rank: rank, total: board.length,
+             lineups: scores.length, top10: board.slice(0, 10) };
   };
 
   // ── Get user profile (streak + PB) ───────────────────────────
@@ -1698,11 +1714,6 @@ body.era-deadball::after {
     <button class="copy-btn" id="copy-btn" onclick="copyScore()">📤 Share</button>
   </div>
 
-  <div class="card" id="board-card" style="display:none">
-    <div class="res-divider" id="board-divider">Today's Board</div>
-    <div id="dash-board"></div>
-  </div>
-
   <div class="card res-cascade">
     <div class="lv-tabs">
       <button class="lv-tab lv-tab-active" id="lv-tab-lineup" onclick="setLineupView('lineup')">Lineup</button>
@@ -1710,6 +1721,10 @@ body.era-deadball::after {
     </div>
     <div id="dash-lineup"></div>
     <div id="batting-order-reveal" style="display:none"></div>
+    <div id="board-card" style="display:none">
+      <div class="res-divider">Today's Board</div>
+      <div id="dash-board"></div>
+    </div>
     <div class="res-divider">Team Totals</div>
     <div class="agg-row" id="agg-row"></div>
     <div class="sb-total" id="sb-total"></div>
@@ -6122,11 +6137,10 @@ function _storeName(o) {
   }
 })();
 
-// Two places can host the name control: the landing page (so a first-timer can
-// claim a handle *before* playing — otherwise their opening game saves as
-// Anonymous) and the results board. Only one form is open at a time, so the
-// input/message element ids stay unique.
-var _NAME_HOSTS = ['landing-name-bar', 'lb-name-bar'];
+// The editable control lives only on the landing screen — a name has to be set
+// *before* a game, since the score is written with whatever handle you held at
+// the time and score docs are create-only. The results board shows it read-only.
+var _NAME_HOSTS = ['landing-name-bar'];
 
 function _renderNameBar() {
   var n = _loadName();
@@ -6228,23 +6242,29 @@ function _renderBoard(el, wins, saveRes, stats) {
     + '<div class="lb-stat"><div class="lb-stat-val">' + streak + '</div><div class="lb-stat-lbl">Day Streak</div></div>'
     + '</div>';
 
-  html += '<div class="lb-note">' + stats.total + ' lineup' + (stats.total === 1 ? '' : 's')
-       + ' built today in this era.</div>';
+  html += '<div class="lb-note">' + stats.total + ' player' + (stats.total === 1 ? '' : 's')
+       + ' today in this era.</div>';
 
   if (stats.top10 && stats.top10.length) {
     var mine = false;
     html += '<div class="lb-list">';
     for (var i = 0; i < stats.top10.length && i < 5; i++) {
       var s = stats.top10[i];
-      // Match on uid alone: top10 is deduped to each player's *best* score, so
-      // an earlier, higher run of yours today won't equal this game's wins.
       var isMe = !mine && !!window._fbUid && s.uid === window._fbUid;
       if (isMe) mine = true;
       // Names are player-supplied — always escape, and re-check the filter on
       // read so anything that slipped past the client on write still renders
       // as Anonymous here.
       var label = (s.name && _isCleanName(s.name)) ? esc(String(s.name).slice(0, 16)) : 'Anonymous';
-      if (isMe) label = label === 'Anonymous' ? 'You' : label + ' <span class="lb-you-tag">you</span>';
+      // Your own row uses the handle you hold *now*. Scores saved before you
+      // picked a name have none stored, and create-only rules mean they can
+      // never be backfilled — without this you'd stay "You" forever.
+      if (isMe) {
+        var mn = window._mrName;
+        label = (mn && _isCleanName(mn))
+          ? esc(String(mn).slice(0, 16)) + ' <span class="lb-you-tag">you</span>'
+          : 'You';
+      }
       html += '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '">'
         + '<span class="lb-rank">' + (i + 1) + '</span>'
         + '<span class="lb-name">' + label + '</span>'
@@ -6253,9 +6273,13 @@ function _renderBoard(el, wins, saveRes, stats) {
     }
     html += '</div>';
   }
-  html += '<div class="lb-name-bar" id="lb-name-bar"></div>';
+  // Read-only here: the score is already saved under whatever name you had, so
+  // offering "change" at this point would imply a rewrite that can't happen.
+  // The editable control lives on the landing screen, before you play.
+  var _n = _loadName();
+  html += '<div class="lb-name-bar">Playing as <strong>'
+       + (_n ? esc(_n.display) : 'Anonymous') + '</strong></div>';
   el.innerHTML = html;
-  _renderNameBar();
 }
 
 function _updateLeaderboard(wins) {
