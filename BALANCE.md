@@ -115,41 +115,74 @@ entirely, or the display would be recommending a stat the game ignores.
 ## Proposed weights ("Goldilocks")
 
 wOBA+ holds at 50%. HR down a notch. TB added at 10% (kept small precisely
-because HR already lives inside it). RBI and Runs reduced but still real.
+because HR already lives inside it — a home run is 4 bases). RBI and Runs
+pinned at 10% each, with the balance taken from SB.
 
 | era | wOBA+ | HR | TB | RBI | Runs | SB |
 |---|---|---|---|---|---|---|
-| modern | .50 | .12 | .10 | .09 | .09 | .10 |
-| steroid | .50 | .14 | .10 | .09 | .09 | .08 |
-| nostalgia | .50 | .11 | .10 | .08 | .09 | .12 |
-| postwar | .50 | .12 | .10 | .09 | .09 | .10 |
+| modern | .50 | .12 | .10 | .10 | .10 | .08 |
+| steroid | .50 | .14 | .10 | .10 | .10 | .06 |
+| nostalgia | .50 | .11 | .10 | .10 | .10 | .09 |
+| postwar | .50 | .12 | .10 | .10 | .10 | .08 |
 | golden | .50 | .14 | .10 | .10 | .10 | .06 |
-| deadball | .50 | .10 | .10 | .08 | .08 | .14 |
+| deadball | .50 | .10 | .10 | .10 | .10 | .10 |
 
 Every row sums to 1.00. Context-dependent share (RBI+Runs) drops from 22–26%
-to 16–20%; individual-production share rises to 80–84%.
+to a flat 20%; individual-production share rises to 80%.
 
-## Measured FLOOR / CEIL (p01 / p99)
+Uniform RBI/Runs costs almost nothing numerically — tested against the
+alternative (RBI/Runs .08–.10, SB up to .14) the mean moved by +0.0 to +0.5
+wins. The real cost is thematic: Dead Ball's SB weight falls .14 → .10, which
+dilutes the one axis that carried that era's identity (no home runs, steal to
+score). Worth revisiting if the eras stop feeling distinct.
 
-Shared by every era:
+## Calibration method — FLOOR stays low, CEIL at p92
+
+An early attempt set FLOOR at p01 of achievable. That is wrong: the existing
+FLOORs are deliberately "theoretical bad", far below anything a real lineup
+produces (Post-War HR floor is 10, but the 1st percentile of actual lineups is
+123). That gap is what lifts a typical lineup to ~0.8 normalised. Moving FLOOR
+to p01 collapses every axis to ~0.5 and the mean falls to ~68.
+
+**Keep the low FLOORs. Only the CEILs were broken.**
+
+With FLOORs unchanged (plus `wobaPlus` FLOOR 1.00 = a league-average lineup),
+sweeping the CEIL percentile over the measured distributions:
 
 ```
-wobaPlus   FLOOR 1.10   CEIL 1.25
+CEIL      mean (pw/gold/dead)   spread   sd    150+   perfect  saturated axes
+p99        93.8  89.8  90.4      4.0    18.2   0.4%    0.00%      0/18
+p97       101.4  98.2 100.0      3.1    20.7   1.7%    0.11%      0/18
+p95       105.4 102.8 104.1      2.6    21.7   3.0%    0.13%      0/18
+p92       110.8 108.7 109.3      2.1    22.7   5.6%    0.18%      0/18   <-- use this
+p90       113.8 111.2 112.2      2.6    23.1   7.1%    0.38%      0/18
+p85       119.7 117.7 117.3      2.3    23.6  11.7%    0.82%      0/18
 ```
 
-Per era, from 1,500 greedy games each:
+**p92 hits every target**: mean ~110, era spread 2.1 wins (down from 19), no
+saturated axis anywhere, 0.18% perfect seasons. sd ~23 is a little wider than
+the 16–20 originally suggested, which is an improvement — more separation
+between a good game and a great one.
+
+Juiced can be given its ~117 premium by using a lower percentile (p85) for that
+era alone, once it has been measured.
+
+## Measured ceilings (p92) for the three tested eras
 
 ```
-postwar    tb 1765/2570   hr 125/260   rbi 545/890   runs 560/870   sb  20/160
-golden     tb 1815/2695   hr  75/210   rbi 575/990   runs 605/960   sb  40/150
-deadball   tb 1360/2115   hr 225/420   rbi 360/700   runs 480/775   sb 125/325
+wobaPlus   CEIL 1.21   FLOOR 1.00     (shared by every era)
+
+postwar    tb 2470  hr 245  rbi 855  runs 840  sb 135
+golden     tb 2595  hr 197  rbi 950  runs 925  sb 138
+deadball   tb 2035  hr 400  rbi 665  runs 745  sb 300
 ```
 
-**Modern, Juiced and Hardball still need measuring** — their TB axis is new and
-has no ceiling at all, and their existing counting ceilings were hand-set. Run
-`mrReport()` on a machine with MLB API access (see below), then apply all six
-eras in one change; recalibrating some now and others later leaves them
-mutually incomparable in between.
+Existing FLOORs for hr/rbi/runs/sb are unchanged. TB floor ≈ 55% of p01.
+
+**Modern, Juiced and Hardball still need measuring** — TB is a new axis with no
+ceiling at all for them. Run `mrReport()` on a machine with MLB API access (see
+below), then apply all six eras in one change; recalibrating some now and others
+later leaves them mutually incomparable in between.
 
 ## Open work
 
