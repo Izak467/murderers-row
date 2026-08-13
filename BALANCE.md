@@ -75,23 +75,81 @@ the top labels meaningful. Post-War's current 128.6 makes "Historic" the
 Also target: **sd 16–20** (Post-War's 13.7 is the saturation bug, not a property
 of the era) and **0.2–0.5% perfect seasons**, so 162-0 stays a real chase.
 
-## Method for the fix
+## The fix: wOBA+ instead of raw wOBA
 
-Set each axis's CEIL at the **p99** of what's actually achievable in that era and
-FLOOR at **p01**, so every axis discriminates up to an elite lineup and only an
-outlier maxes it. `mrReport` prints those percentiles, so it is a mechanical
-calibration rather than a guess.
+Hand-tuning six sets of wOBA ceilings is the wrong approach. The metric should
+be **relative to league**: `wOBA+ = durability-adjusted wOBA / lgWoba`, where
+`lgWoba` is already present per season in `woba_weights.js` — currently used
+for the durability regression and then discarded before normalisation.
 
-Measured p99 ceilings for the three tested eras:
+Measured over 1,500 greedy games per era:
 
 ```
-postwar   woba 0.368 -> 0.403   hr 225 -> 265   rbi 800 -> 875   runs 785 -> 880
-golden    woba 0.392 -> 0.434   hr 215 -> 220   rbi 940 -> 985   runs 900 -> 965
-deadball  woba 0.385 -> 0.393   hr 360 -> 415   rbi 740 -> 685   runs 760 -> 770
+              p01     p50     p99
+postwar      1.099   1.162   1.243
+golden       1.096   1.161   1.263
+deadball     1.098   1.163   1.251
 ```
 
-Do **all six eras in one change** — recalibrating some now and others later
-leaves them mutually incomparable in between.
+The eras are **already balanced** on wOBA once expressed relative to league —
+a typical lineup is ~16% above league average in every era, agreeing to three
+decimal places. The entire cross-era imbalance on that axis was an artifact of
+comparing raw wOBA against hand-picked ceilings.
+
+So the wOBA axis takes **one shared FLOOR 1.10 / CEIL 1.25 for all six eras**,
+and never needs per-era tuning again — including for any era added later.
+
+### Two secondary problems with the counting stats
+
+**HR is double-counted.** It is the heaviest term inside wOBA — for a 40-HR
+season, 37% of that player's wOBA is home runs — and then HR carries another
+14–18% of the score on its own. It is also 4 bases inside Total Bases.
+
+**RBI and Runs do not transfer.** Both depend on teammates: RBI on who bats
+ahead, Runs on who bats behind. Lineups here are assembled from nine *different*
+team-seasons, so summing them measures the 1955 Dodgers' baserunners, not the
+lineup the player built. Currently 22–26% of the score. Kept, but reduced —
+they stay legible on the results card and shouldn't vanish from scoring
+entirely, or the display would be recommending a stat the game ignores.
+
+## Proposed weights ("Goldilocks")
+
+wOBA+ holds at 50%. HR down a notch. TB added at 10% (kept small precisely
+because HR already lives inside it). RBI and Runs reduced but still real.
+
+| era | wOBA+ | HR | TB | RBI | Runs | SB |
+|---|---|---|---|---|---|---|
+| modern | .50 | .12 | .10 | .09 | .09 | .10 |
+| steroid | .50 | .14 | .10 | .09 | .09 | .08 |
+| nostalgia | .50 | .11 | .10 | .08 | .09 | .12 |
+| postwar | .50 | .12 | .10 | .09 | .09 | .10 |
+| golden | .50 | .14 | .10 | .10 | .10 | .06 |
+| deadball | .50 | .10 | .10 | .08 | .08 | .14 |
+
+Every row sums to 1.00. Context-dependent share (RBI+Runs) drops from 22–26%
+to 16–20%; individual-production share rises to 80–84%.
+
+## Measured FLOOR / CEIL (p01 / p99)
+
+Shared by every era:
+
+```
+wobaPlus   FLOOR 1.10   CEIL 1.25
+```
+
+Per era, from 1,500 greedy games each:
+
+```
+postwar    tb 1765/2570   hr 125/260   rbi 545/890   runs 560/870   sb  20/160
+golden     tb 1815/2695   hr  75/210   rbi 575/990   runs 605/960   sb  40/150
+deadball   tb 1360/2115   hr 225/420   rbi 360/700   runs 480/775   sb 125/325
+```
+
+**Modern, Juiced and Hardball still need measuring** — their TB axis is new and
+has no ceiling at all, and their existing counting ceilings were hand-set. Run
+`mrReport()` on a machine with MLB API access (see below), then apply all six
+eras in one change; recalibrating some now and others later leaves them
+mutually incomparable in between.
 
 ## Open work
 
