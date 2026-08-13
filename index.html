@@ -1486,6 +1486,30 @@ body.era-deadball::after {
 /* Batting order animated reveal */
 @keyframes bo-appear { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 .bo-reveal-row { opacity:0; animation:bo-appear 0.22s ease forwards; display:grid; grid-template-columns:28px 1fr auto; gap:6px; align-items:center; padding:8px 10px; background:var(--surface); border-radius:7px; border:1px solid var(--border); margin-bottom:3px; }
+.bo-badges { display:inline-flex; align-items:center; gap:2px; vertical-align:middle; margin-left:3px; }
+.bo-tappable { cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; transition:border-color .15s, background .15s; }
+.bo-tappable:hover { background:var(--surface2); }
+.bo-reveal-row.bo-sel { border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); background:rgba(201,164,74,.07); }
+@keyframes bo-swap-flash {
+  0%   { border-color:var(--gold); background:rgba(201,164,74,.16); }
+  100% { border-color:var(--border); background:var(--surface); }
+}
+.bo-reveal-row.bo-swapped { animation:bo-swap-flash .55s ease-out; }
+.bo-footer { display:flex; align-items:center; gap:10px; padding:8px 2px 2px; flex-wrap:wrap; }
+.bo-reset {
+  padding:5px 11px; font-size:11px; font-weight:800; letter-spacing:.3px;
+  color:var(--gold); background:transparent; border:1px solid var(--gold-dk);
+  border-radius:6px; cursor:pointer; transition:background .15s;
+}
+.bo-reset:hover { background:rgba(201,164,74,.12); }
+.bo-hint { font-size:11px; color:var(--muted); margin-left:auto; }
+
+/* Lineup <-> Batting Order cross-fade */
+@keyframes lv-out { to { opacity:0; transform:translateY(-6px); } }
+@keyframes lv-in  { from { opacity:0; transform:translateY(8px); } }
+.lv-out { animation:lv-out .13s ease-in forwards; }
+.lv-in  { animation:lv-in .26s cubic-bezier(.22,.61,.36,1); }
+
 .bo-stats { text-align:right; }
 .bo-slash { font-size:11px; font-weight:700; color:var(--cream-dim); font-family:monospace; white-space:nowrap; }
 .bo-counts { font-size:10px; color:var(--muted); margin-top:2px; white-space:nowrap; }
@@ -4594,6 +4618,25 @@ function getAwardBadgesHtml(player, year) {
   return html;
 }
 
+// Badges for a placed lineup slot. Shared by the results lineup card and the
+// batting order so the two views can't drift apart.
+function _slotBadgesHtml(slot) {
+  if (!slot || !slot.player) return '';
+  var bdg = '';
+  if (slot.awards) {
+    if (slot.awards.mvp) bdg += _mvpBadgeHtml(slot.awards.mvp, 'fl-award-badge mvp-badge');
+    if (slot.awards.roy) bdg += '<span class="fl-award-badge">'+_svgFlame(14)+'</span>';
+    if (slot.awards.asg) bdg += '<span class="fl-award-badge">'+_svgStar(14)+'</span>';
+    if (slot.awards.ss)  bdg += '<span class="fl-award-badge">'+_svgBall(14)+'</span>';
+  }
+  if (({deadball:1,golden:1,postwar:1,nostalgia:1}[S.era])
+      && ((HOF_PLAYERS && HOF_PLAYERS[slot.player.id])
+          || (S.era === 'nostalgia' && HOF_NOSTALGIA_NAMES && HOF_NOSTALGIA_NAMES[slot.player.name]))) {
+    bdg += '<span class="fl-award-badge">'+_svgPlaque(14)+'</span>';
+  }
+  return bdg;
+}
+
 // ─── State ───────────────────────────────────────────────────────────────────
 var S = {
   era:          'modern', // 'modern' | 'steroid' | 'nostalgia'
@@ -4618,6 +4661,8 @@ var S = {
   posFilter:    [],   // position names to show; empty = all
   _pendingPos:  [],   // staged in dropdown before OK
   excludeDH:    false, // when true, DH doesn't count as "available" for Available Only / hasAvail
+  _boOrder:     null,  // custom batting order as lineup indices; null = auto-generated
+  _boSel:       -1,    // display position awaiting a swap partner; -1 = nothing selected
 };
 
 // ─── Motion helpers ──────────────────────────────────────────────────────────
@@ -6507,16 +6552,7 @@ function showResults() {
       var st = slot.player.stats;
       var ops = (st.obp||0)+(st.slg||0);
       var sc = _tierCol(ops);
-      var bdg = '';
-      if (slot.awards) {
-        if (slot.awards.mvp) bdg += _mvpBadgeHtml(slot.awards.mvp,'fl-award-badge mvp-badge');
-        if (slot.awards.roy) bdg += '<span class="fl-award-badge">'+_svgFlame(14)+'</span>';
-        if (slot.awards.asg) bdg += '<span class="fl-award-badge">'+_svgStar(14)+'</span>';
-        if (slot.awards.ss)  bdg += '<span class="fl-award-badge">'+_svgBall(14)+'</span>';
-      }
-      if (({deadball:1,golden:1,postwar:1,nostalgia:1}[S.era]) && ((HOF_PLAYERS && HOF_PLAYERS[slot.player.id]) || (S.era==='nostalgia' && HOF_NOSTALGIA_NAMES && HOF_NOSTALGIA_NAMES[slot.player.name]))) {
-        bdg += '<span class="fl-award-badge">'+_svgPlaque(14)+'</span>';
-      }
+      var bdg = _slotBadgesHtml(slot);
       html += '<div class="lu-row">'
         +'<div class="lu-pos">'+slotLabel(POS[i])+'</div>'
         +'<div class="lu-body">'
@@ -6875,6 +6911,7 @@ function startGame(hard, lockTeamId, lockYear, vs) {
   S.skips={team:1,year:1}; S.spin=null; S.allPlayers=[]; S.loadError=null;
   S.spinning=false; S.loading=false; S.sort={col:'games',dir:'desc'};
   S.moveToken=2; S.movingSlotIdx=-1; S.recentYears=[]; S.recentTeams=[]; S.availableOnly=false;
+  S._boOrder=null; S._boSel=-1;
   S.posFilter=[]; S._pendingPos=[]; S.excludeDH=false;
   S.hardMode = (hard === true);
   S.vsMode = (vs === true);
@@ -7521,39 +7558,101 @@ function generateBattingOrder() {
   return result.filter(function(p){ return !!p; });
 }
 
+// ─── Batting order (interactive) ─────────────────────────────────────────────
+// Reordering is presentation only — simulate() aggregates the nine players and
+// never reads the order, so a custom card can't change your record.
+function _boOrderIdxs() {
+  if (S._boOrder && S._boOrder.length === 9) return S._boOrder.slice();
+  return generateBattingOrder().map(function(p) { return p.idx; });
+}
+
+function _boTap(pos) {
+  if (S._boSel === -1) { S._boSel = pos; _renderBattingOrder(false); return; }
+  if (S._boSel === pos) { S._boSel = -1; _renderBattingOrder(false); return; } // tap again to deselect
+  var idxs = _boOrderIdxs();
+  var a = S._boSel, b = pos;
+  var tmp = idxs[a]; idxs[a] = idxs[b]; idxs[b] = tmp;
+  S._boOrder = idxs;
+  S._boSel = -1;
+  _renderBattingOrder(false, [a, b]);
+}
+
+function _boReset() {
+  S._boOrder = null;
+  S._boSel = -1;
+  _renderBattingOrder(true);
+}
+
+// stagger: cascade rows in (first reveal only). pulse: display positions to flash.
+function _renderBattingOrder(stagger, pulse) {
+  var boEl = document.getElementById('batting-order-reveal');
+  if (!boEl) return;
+  var idxs = _boOrderIdxs();
+  var html = '<div id="bo-reveal-grid" style="padding-bottom:4px">';
+
+  for (var i = 0; i < idxs.length; i++) {
+    var slot = S.lineup[idxs[i]];
+    if (!slot) continue;
+    var st = slot.player.stats || {};
+    var slash = fmtSlash(st.avg) + '/' + fmtSlash(st.obp) + '/' + fmtSlash(st.slg);
+    var cnts = (S.era === 'deadball'
+      ? Math.round((st.h2b||0)+(st.h3b||0)+(st.hr||0)) + 'XBH'
+      : Math.round(st.hr||0) + 'HR') + ' &middot; ' + Math.round(st.rbi||0) + 'RBI';
+    var bdg = _slotBadgesHtml(slot);
+    var cls = 'bo-reveal-row bo-tappable';
+    if (i === S._boSel) cls += ' bo-sel';
+    if (pulse && pulse.indexOf(i) !== -1) cls += ' bo-swapped';
+    var delay = stagger ? (' style="animation-delay:' + (i * 55) + 'ms"') : ' style="animation-delay:0s"';
+    html += '<div class="' + cls + '"' + delay + ' onclick="_boTap(' + i + ')">'
+      + '<div class="bo-num">' + (i + 1) + '</div>'
+      + '<div class="bo-name">' + esc(slot.player.name)
+      + (bdg ? ' <span class="bo-badges">' + bdg + '</span>' : '')
+      + '<div class="bo-sub">' + slotLabel(POS[idxs[i]]) + ' &middot; ' + slot.year + '</div></div>'
+      + '<div class="bo-stats"><div class="bo-slash">' + slash + '</div>'
+      + '<div class="bo-counts">' + cnts + '</div></div>'
+      + '</div>';
+  }
+  html += '</div>';
+
+  html += '<div class="bo-footer">'
+    + (S._boOrder ? '<button class="bo-reset" onclick="_boReset()">↺ Reset order</button>' : '')
+    + '<span class="bo-hint">'
+    + (S._boSel === -1 ? 'Tap two players to swap them' : 'Now tap who they swap with')
+    + '</span></div>';
+
+  boEl.innerHTML = html;
+}
+
 function setLineupView(view) {
   var lineupEl = document.getElementById('dash-lineup');
   var boEl     = document.getElementById('batting-order-reveal');
   var tabL     = document.getElementById('lv-tab-lineup');
   var tabB     = document.getElementById('lv-tab-batting');
   if (!lineupEl || !boEl) return;
-  if (view === 'batting') {
-    lineupEl.style.display = 'none'; boEl.style.display = '';
-    if (tabL) tabL.classList.remove('lv-tab-active');
-    if (tabB) tabB.classList.add('lv-tab-active');
-    // Animated sequential reveal
-    boEl.innerHTML = '<div id="bo-reveal-grid" style="padding-bottom:4px"></div>';
-    var grid = document.getElementById('bo-reveal-grid');
-    var bo = generateBattingOrder();
-    bo.forEach(function(p, i) {
-      setTimeout(function() {
-        var row = document.createElement('div');
-        row.className = 'bo-reveal-row';
-        row.style.animationDelay = '0s';
-        var _st = S.lineup[p.idx] ? S.lineup[p.idx].player.stats : null;
-        var _slash = _st ? (fmtSlash(_st.avg)+'/'+fmtSlash(_st.obp)+'/'+fmtSlash(_st.slg)) : p.ob.toFixed(3);
-        var _cnts = _st ? (S.era==='deadball' ? (Math.round((_st.h2b||0)+(_st.h3b||0)+(_st.hr||0))+'XBH &middot; '+Math.round(_st.rbi||0)+'RBI') : (Math.round(_st.hr||0)+'HR &middot; '+Math.round(_st.rbi||0)+'RBI')) : '';
-        row.innerHTML = '<div class="bo-num">'+(i+1)+'</div>'
-          +'<div class="bo-name">'+esc(p.name)+'<div class="bo-sub">'+p.pos+' &middot; '+p.year+'</div></div>'
-          +'<div class="bo-stats"><div class="bo-slash">'+_slash+'</div><div class="bo-counts">'+_cnts+'</div></div>';
-        grid.appendChild(row);
-      }, i * 110);
-    });
-  } else {
-    lineupEl.style.display = ''; boEl.style.display = 'none';
-    if (tabL) tabL.classList.add('lv-tab-active');
-    if (tabB) tabB.classList.remove('lv-tab-active');
+
+  var toBatting = (view === 'batting');
+  var incoming = toBatting ? boEl : lineupEl;
+  var outgoing = toBatting ? lineupEl : boEl;
+
+  // Tabs flip immediately so the tap feels answered; the panels cross-fade.
+  if (tabL) tabL.classList.toggle('lv-tab-active', !toBatting);
+  if (tabB) tabB.classList.toggle('lv-tab-active', toBatting);
+  if (incoming.style.display !== 'none' && outgoing.style.display === 'none') return; // already there
+
+  function swapIn() {
+    outgoing.style.display = 'none';
+    outgoing.classList.remove('lv-out');
+    if (toBatting) { S._boSel = -1; _renderBattingOrder(true); }
+    incoming.style.display = '';
+    incoming.classList.remove('lv-in');
+    void incoming.offsetWidth;
+    incoming.classList.add('lv-in');
+    setTimeout(function() { incoming.classList.remove('lv-in'); }, 300);
   }
+
+  if (outgoing.style.display === 'none' || _reduceMotion()) { swapIn(); return; }
+  outgoing.classList.add('lv-out');
+  setTimeout(swapIn, 130);
 }
 
 </script>
