@@ -65,14 +65,26 @@
       ts:        Date.now()
     });
 
-    // Update personal best
-    var pbRef = doc(db, 'users', window._fbUid);
+    // Personal best is per collection, so each era — and Hard Mode within an
+    // era — keeps its own. A 150 in the Juiced era says nothing about your best
+    // Dead Ball lineup, and one shared number let the easiest era mask the rest.
+    var pbRef  = doc(db, 'users', window._fbUid);
     var pbSnap = await getDoc(pbRef);
-    var oldPB = pbSnap.exists() ? (pbSnap.data().pb || 0) : 0;
-    var oldStreak = pbSnap.exists() ? (pbSnap.data().streak || 0) : 0;
-    var lastDate  = pbSnap.exists() ? (pbSnap.data().lastDate || '') : '';
+    var prof   = pbSnap.exists() ? pbSnap.data() : {};
+    var pbField = 'pb_' + coll;
 
-    // Streak logic
+    var oldPB = prof[pbField];
+    if (oldPB === undefined || oldPB === null) {
+      // One-time carry-over: the old single `pb` predates per-era tracking and
+      // was almost certainly set in the default era, so let modern inherit it
+      // rather than resetting someone's best to zero.
+      oldPB = (coll === 'scores') ? (prof.pb || 0) : 0;
+    }
+
+    var oldStreak = prof.streak || 0;
+    var lastDate  = prof.lastDate || '';
+
+    // Streak counts days played at all, not per era.
     var yesterday = new Date(today); yesterday.setDate(yesterday.getDate()-1);
     var yStr = yesterday.getFullYear() + '-' +
       String(yesterday.getMonth()+1).padStart(2,'0') + '-' +
@@ -80,7 +92,9 @@
     var newStreak = (lastDate === yStr || lastDate === dateStr) ? (lastDate === dateStr ? oldStreak : oldStreak + 1) : 1;
     var newPB     = Math.max(oldPB, wins);
 
-    await setDoc(pbRef, { pb: newPB, streak: newStreak, lastDate: dateStr }, { merge: true });
+    var payload = { streak: newStreak, lastDate: dateStr };
+    payload[pbField] = newPB;
+    await setDoc(pbRef, payload, { merge: true });
 
     return { isNewPB: wins > oldPB, streak: newStreak, pb: newPB };
   };
@@ -1725,11 +1739,11 @@ body.era-deadball::after {
       <div class="res-divider">Today's Board</div>
       <div id="dash-board"></div>
     </div>
+    <div class="res-divider">Performance Matrix</div>
+    <div id="dash-matrix"></div>
     <div class="res-divider">Team Totals</div>
     <div class="agg-row" id="agg-row"></div>
     <div class="sb-total" id="sb-total"></div>
-    <div class="res-divider">Performance Matrix</div>
-    <div id="dash-matrix"></div>
     <div class="res-divider">Patience vs Power</div>
     <div id="dash-plot"></div>
     <div class="res-divider">Leaders</div>
@@ -6627,14 +6641,14 @@ function showResults() {
       +chip(fmtSlash(a.slg),       'SLG', 'var(--cream)')
       +chip(fmtSlash(a.obp+a.slg), 'OPS', 'var(--cream)')
       +'</div><div class="agg-section-lbl">Totals</div><div class="agg-chips">'
+      +chip(Math.round(a.runs), 'R',   'var(--cream)')
       +chip(Math.round(a.hr),   S.era==='deadball'?'XBH':'HR',  'var(--cream)')
       +chip(Math.round(a.rbi),  'RBI', 'var(--cream)')
-      +chip(Math.round(a.runs), 'R',   'var(--cream)')
       +chip(Math.round(a.sb),   'SB',  'var(--cream)')
       +'</div><div class="agg-section-lbl">Per Player</div><div class="agg-chips">'
+      +chip((a.runs/9).toFixed(1), 'R',   'var(--cream)')
       +chip((a.hr/9).toFixed(1),   S.era==='deadball'?'XBH':'HR',  'var(--cream)')
       +chip((a.rbi/9).toFixed(1),  'RBI', 'var(--cream)')
-      +chip((a.runs/9).toFixed(1), 'R',   'var(--cream)')
       +chip((a.sb/9).toFixed(1),   'SB',  'var(--cream)')
       +'</div>';
   })();
