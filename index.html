@@ -116,44 +116,56 @@
     snap.forEach(function(d) { scores.push(d.data()); });
     scores.sort(function(a, b) { return (b.wins || 0) - (a.wins || 0); });
 
-    // One entry per PLAYER, not per lineup — otherwise someone who played five
-    // times fills the board and their own earlier runs outrank them. `scores`
-    // is already sorted desc, so the first hit for a uid is that player's best.
-    // For the current player we substitute THIS game's score, so the board
-    // describes the run just finished rather than an earlier, better one.
+    // Every round shows — no dedupe. Play five times and all five appear, which
+    // also means rank and the list are read off one array and can't disagree.
     var me = window._fbUid || null;
-    var seen = {}, board = [];
-    for (var i = 0; i < scores.length; i++) {
-      var s = scores[i];
-      var id = s.uid || ('anon' + i);
-      if (seen[id]) continue;
-      seen[id] = true;
-      board.push((me && s.uid === me)
-        ? { uid: s.uid, wins: myWins, name: window._mrName || s.name || null }
-        : s);
-    }
-    board.sort(function(a, b) { return (b.wins || 0) - (a.wins || 0); });
+    var board = scores;
 
-    // Rank straight off the board so the tile and the list can never disagree.
-    var rank = 1;
-    for (var r = 0; r < board.length; r++) {
-      if (me && board[r].uid === me) { rank = r + 1; break; }
-      if (!me && board[r].wins <= myWins) { rank = r + 1; break; }
+    // Find the row for the run just finished: first entry with my uid at this
+    // exact score. Marking it (rather than "any row of mine") keeps the
+    // highlight on the game being reported, even when earlier runs scored higher.
+    var myIdx = -1;
+    for (var i = 0; i < board.length; i++) {
+      if (me && board[i].uid === me && (board[i].wins || 0) === myWins) { myIdx = i; break; }
     }
+    if (myIdx === -1) {
+      // Fallback if the just-saved row hasn't propagated: slot in by score.
+      myIdx = board.length;
+      for (var j = 0; j < board.length; j++) {
+        if ((board[j].wins || 0) <= myWins) { myIdx = j; break; }
+      }
+    }
+    var rank = myIdx + 1;
 
-    // Percentile against the other players' best runs. Wins are integers so
-    // ties are common; they count as half (standard midrank percentile),
-    // otherwise a ten-way tie reads as 0th percentile while ranking #1.
-    var rivals = board.filter(function(e) { return !me || e.uid !== me; })
-                      .map(function(e) { return e.wins || 0; });
+    // Percentile against every other lineup on the board, mine included — if an
+    // earlier run of yours beat this one, that's a real result standing above it.
+    // Ties count as half (standard midrank), otherwise a ten-way tie reads as
+    // 0th percentile while ranking #1.
+    var rivals = [];
+    for (var k = 0; k < board.length; k++) if (k !== myIdx) rivals.push(board[k].wins || 0);
     var below = rivals.filter(function(w) { return w < myWins; }).length;
     var equal = rivals.filter(function(w) { return w === myWins; }).length;
     var percentile = rivals.length
       ? Math.max(0, Math.min(100, Math.round(((below + 0.5 * equal) / rivals.length) * 100)))
       : 100;
 
-    return { percentile: percentile, rank: rank, total: board.length,
-             lineups: scores.length, top10: board.slice(0, 10) };
+    // Rows carry their own rank so runs pulled in from outside the top 10 still
+    // display the right position.
+    function row(e, idx) {
+      return { uid: e.uid, wins: e.wins || 0, name: e.name || null,
+               rank: idx + 1, isThis: idx === myIdx };
+    }
+    var rows = [];
+    for (var t = 0; t < board.length && t < 10; t++) rows.push(row(board[t], t));
+    // Always surface your own runs, even when they fall below the top 10 —
+    // otherwise "every round shows" quietly isn't true on a busy day.
+    if (me) {
+      for (var t2 = 10; t2 < board.length; t2++) {
+        if (board[t2].uid === me) rows.push(row(board[t2], t2));
+      }
+    }
+
+    return { percentile: percentile, rank: rank, total: board.length, rows: rows };
   };
 
   // ── Get user profile (streak + PB) ───────────────────────────
@@ -726,6 +738,8 @@ body::before {
 .lb-name-save { padding: 9px 16px; background: var(--gold); color: #0d1b2a; border: none; border-radius: 6px; font-weight: 800; font-size: 14px; cursor: pointer; font-family: inherit; }
 .lb-name-save:disabled { opacity: .6; cursor: default; }
 .lb-name-msg { flex: 1 0 100%; font-size: 12px; color: var(--muted); min-height: 15px; }
+.lb-name-locked { font-size: 11px; color: var(--muted); opacity: .75; font-style: italic; margin-left: 4px; }
+.lb-gap { text-align: center; color: var(--muted); font-size: 12px; letter-spacing: 2px; padding: 2px 0; }
 .lb-name-msg.err { color: #f08080; }
 .res-divider:first-child { border-top: none; padding-top: 0; margin-top: 0; }
 
@@ -6128,6 +6142,23 @@ function _validateName(raw) {
   return { ok: true, lower: display.toLowerCase(), display: display };
 }
 
+// Once you've set a name AND played a round today, it's locked until tomorrow —
+// a handle shouldn't shift underneath scores already on today's board.
+var MR_PLAYED_KEY = 'mr-played-date';
+function _todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function _markPlayedToday() {
+  try { localStorage.setItem(MR_PLAYED_KEY, _todayStr()); } catch (e) {}
+}
+function _playedToday() {
+  try { return localStorage.getItem(MR_PLAYED_KEY) === _todayStr(); } catch (e) { return false; }
+}
+// Anonymous players aren't locked out — otherwise forgetting to set a name
+// before your first game would strand you as Anonymous for the rest of the day.
+function _nameLocked() { return !!_loadName() && _playedToday(); }
+
 function _loadName() {
   try {
     var raw = localStorage.getItem(MR_NAME_KEY);
@@ -6158,20 +6189,27 @@ var _NAME_HOSTS = ['landing-name-bar'];
 
 function _renderNameBar() {
   var n = _loadName();
+  var locked = _nameLocked();
   for (var i = 0; i < _NAME_HOSTS.length; i++) {
     var el = document.getElementById(_NAME_HOSTS[i]);
     if (!el) continue;
-    el.innerHTML = n
-      ? 'Playing as <strong>' + esc(n.display) + '</strong> '
-        + '<button class="lb-name-link" onclick="_openNameForm(\'' + _NAME_HOSTS[i] + '\')">change</button>'
-      : 'Playing as <strong>Anonymous</strong> '
+    if (locked) {
+      el.innerHTML = 'Playing as <strong>' + esc(n.display) + '</strong> '
+        + '<span class="lb-name-locked">locked until tomorrow</span>';
+    } else if (n) {
+      el.innerHTML = 'Playing as <strong>' + esc(n.display) + '</strong> '
+        + '<button class="lb-name-link" onclick="_openNameForm(\'' + _NAME_HOSTS[i] + '\')">change</button>';
+    } else {
+      el.innerHTML = 'Playing as <strong>Anonymous</strong> '
         + '<button class="lb-name-link" onclick="_openNameForm(\'' + _NAME_HOSTS[i] + '\')">pick a username</button>';
+    }
   }
 }
 
 function _openNameForm(hostId) {
+  if (_nameLocked()) return;
   _renderNameBar(); // collapse a form already open in the other host
-  var el = document.getElementById(hostId || 'lb-name-bar');
+  var el = document.getElementById(hostId || 'landing-name-bar');
   if (!el) return;
   var cur = _loadName();
   el.innerHTML = '<div class="lb-name-form">'
@@ -6191,6 +6229,7 @@ function _submitName() {
   if (!inp || !msg) return;
   function fail(t) { msg.textContent = t; msg.className = 'lb-name-msg err'; if (btn) { btn.disabled = false; btn.textContent = 'Save'; } }
 
+  if (_nameLocked()) { fail('Locked until tomorrow — you’ve already played today.'); return; }
   var v = _validateName(inp.value);
   if (!v.ok) { fail(v.msg); return; }
   if (!window._fbClaimUsername) { fail('Offline — try again later.'); return; }
@@ -6256,31 +6295,34 @@ function _renderBoard(el, wins, saveRes, stats) {
     + '<div class="lb-stat"><div class="lb-stat-val">' + streak + '</div><div class="lb-stat-lbl">Day Streak</div></div>'
     + '</div>';
 
-  html += '<div class="lb-note">' + stats.total + ' player' + (stats.total === 1 ? '' : 's')
-       + ' today in this era.</div>';
+  html += '<div class="lb-note">' + stats.total + ' lineup' + (stats.total === 1 ? '' : 's')
+       + ' played today in this era.</div>';
 
-  if (stats.top10 && stats.top10.length) {
-    var mine = false;
+  var rows = stats.rows || [];
+  if (rows.length) {
+    var uid = window._fbUid;
+    var myName = window._mrName;
+    var prevRank = 0;
     html += '<div class="lb-list">';
-    for (var i = 0; i < stats.top10.length && i < 5; i++) {
-      var s = stats.top10[i];
-      var isMe = !mine && !!window._fbUid && s.uid === window._fbUid;
-      if (isMe) mine = true;
+    for (var i = 0; i < rows.length; i++) {
+      var s = rows[i];
+      var isMine = !!uid && s.uid === uid;
       // Names are player-supplied — always escape, and re-check the filter on
       // read so anything that slipped past the client on write still renders
       // as Anonymous here.
       var label = (s.name && _isCleanName(s.name)) ? esc(String(s.name).slice(0, 16)) : 'Anonymous';
-      // Your own row uses the handle you hold *now*. Scores saved before you
-      // picked a name have none stored, and create-only rules mean they can
-      // never be backfilled — without this you'd stay "You" forever.
-      if (isMe) {
-        var mn = window._mrName;
-        label = (mn && _isCleanName(mn))
-          ? esc(String(mn).slice(0, 16)) + ' <span class="lb-you-tag">you</span>'
-          : 'You';
+      // Your rows use the handle you hold *now*. Scores saved before you picked
+      // a name have none stored, and create-only rules mean they can never be
+      // backfilled — without this an early run would read "Anonymous" forever.
+      if (isMine) {
+        label = (myName && _isCleanName(myName)) ? esc(String(myName).slice(0, 16)) : 'You';
+        if (s.isThis) label += ' <span class="lb-you-tag">this run</span>';
       }
-      html += '<div class="lb-row' + (isMe ? ' lb-row-me' : '') + '">'
-        + '<span class="lb-rank">' + (i + 1) + '</span>'
+      // Gap marker when one of your runs was pulled up from below the top 10.
+      if (s.rank > prevRank + 1) html += '<div class="lb-gap">⋯</div>';
+      prevRank = s.rank;
+      html += '<div class="lb-row' + (s.isThis ? ' lb-row-me' : '') + '">'
+        + '<span class="lb-rank">' + s.rank + '</span>'
         + '<span class="lb-name">' + label + '</span>'
         + '<span class="lb-wins">' + s.wins + '–' + (162 - s.wins) + '</span>'
         + '</div>';
@@ -6337,6 +6379,7 @@ function showResults() {
   var losses = 162 - res.wins;
   S.lastResult = res;
   saveToHistory(res.wins); _renderVsResult();
+  _markPlayedToday(); // locks the username for the rest of the day
   _updateLeaderboard(res.wins);
 
   var rec = document.getElementById('result-record');
