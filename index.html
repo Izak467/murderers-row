@@ -17,6 +17,42 @@
 <meta name="twitter:image" content="https://murderers-row.net/og-image.png">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+<script>
+// ─── Game day ────────────────────────────────────────────────────────────────
+// Every date in the app — score writes, the leaderboard query, the streak and
+// the username lock — comes from here, so the daily board is one shared board.
+// Using the device's local date instead would split it: at 12:30am ET a New
+// York player writes tomorrow's date while Los Angeles is still on today's, so
+// for three hours every night the coasts can't see each other.
+//
+// The day rolls at 3am America/New_York: past midnight in every continental US
+// zone, and the deadest hour, so a West Coast evening never gets cut in half.
+// Intl handles the EST/EDT switch — a hardcoded UTC offset would silently
+// break twice a year.
+// Declared in a classic script before the module so both scopes can use it.
+var MR_RESET_HOUR_ET = 3;
+function _mrDayKey(when) {
+  var d = when || new Date();
+  var shifted = new Date(d.getTime() - MR_RESET_HOUR_ET * 3600 * 1000);
+  try {
+    // en-CA formats as YYYY-MM-DD.
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(shifted);
+  } catch (e) {
+    // Ancient browser with no tz support — local date beats throwing.
+    return shifted.getFullYear() + '-'
+      + String(shifted.getMonth() + 1).padStart(2, '0') + '-'
+      + String(shifted.getDate()).padStart(2, '0');
+  }
+}
+function _mrPrevDayKey(when) {
+  return _mrDayKey(new Date((when || new Date()).getTime() - 24 * 3600 * 1000));
+}
+window._mrDayKey = _mrDayKey;
+window._mrPrevDayKey = _mrPrevDayKey;
+</script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -48,10 +84,7 @@
     wins = Math.max(0, Math.min(162, Math.round(Number(wins))));
     if (!isFinite(wins)) return;
     coll = coll || 'scores';
-    var today = new Date();
-    var dateStr = today.getFullYear() + '-' +
-      String(today.getMonth()+1).padStart(2,'0') + '-' +
-      String(today.getDate()).padStart(2,'0');
+    var dateStr = window._mrDayKey();
 
     // Save to scores collection. The display name is denormalised onto each
     // score so the board needs no extra reads; a rename only affects new rows,
@@ -84,11 +117,9 @@
     var oldStreak = prof.streak || 0;
     var lastDate  = prof.lastDate || '';
 
-    // Streak counts days played at all, not per era.
-    var yesterday = new Date(today); yesterday.setDate(yesterday.getDate()-1);
-    var yStr = yesterday.getFullYear() + '-' +
-      String(yesterday.getMonth()+1).padStart(2,'0') + '-' +
-      String(yesterday.getDate()).padStart(2,'0');
+    // Streak counts days played at all, not per era. Same 3am ET boundary, so a
+    // late-night session can't silently count as two days.
+    var yStr = window._mrPrevDayKey();
     var newStreak = (lastDate === yStr || lastDate === dateStr) ? (lastDate === dateStr ? oldStreak : oldStreak + 1) : 1;
     var newPB     = Math.max(oldPB, wins);
 
@@ -102,10 +133,7 @@
   // ── Get today's leaderboard + percentile ─────────────────────
   window._fbGetTodayStats = async function(myWins, coll) {
     coll = coll || 'scores';
-    var today = new Date();
-    var dateStr = today.getFullYear() + '-' +
-      String(today.getMonth()+1).padStart(2,'0') + '-' +
-      String(today.getDate()).padStart(2,'0');
+    var dateStr = window._mrDayKey();
 
     // Equality filter only — adding orderBy('wins') server-side would need a
     // composite (date, wins) index in each of the 12 era/hard collections, and
@@ -6145,10 +6173,7 @@ function _validateName(raw) {
 // Once you've set a name AND played a round today, it's locked until tomorrow —
 // a handle shouldn't shift underneath scores already on today's board.
 var MR_PLAYED_KEY = 'mr-played-date';
-function _todayStr() {
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
+function _todayStr() { return window._mrDayKey(); }
 function _markPlayedToday() {
   try { localStorage.setItem(MR_PLAYED_KEY, _todayStr()); } catch (e) {}
 }
