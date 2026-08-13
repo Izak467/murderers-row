@@ -1818,7 +1818,7 @@ body.era-deadball::after {
 
   <div id="vs-result"></div>
   <div style="padding:10px 0 4px">
-<div id="fl-origins"></div>
+<div id="fl-origins" class="fl-origins"></div>
   </div>
 </div>
 
@@ -4618,6 +4618,18 @@ function getAwardBadgesHtml(player, year) {
   return html;
 }
 
+// Counting stats for a placed slot, in the same R / HR / RBI / SB order the
+// Team Totals chips use. Shared so the lineup card and batting order match.
+function _slotCountsHtml(st) {
+  st = st || {};
+  var power = (S.era === 'deadball')
+    ? Math.round((st.hr||0) + (st.h2b||0) + (st.h3b||0)) + 'XBH'
+    : Math.round(st.hr||0) + 'HR';
+  return Math.round(st.runs||0) + 'R &middot; ' + power
+       + ' &middot; ' + Math.round(st.rbi||0) + 'RBI'
+       + ' &middot; ' + Math.round(st.sb||0) + 'SB';
+}
+
 // Badges for a placed lineup slot. Shared by the results lineup card and the
 // batting order so the two views can't drift apart.
 function _slotBadgesHtml(slot) {
@@ -6562,7 +6574,7 @@ function showResults() {
         +'<div class="lu-right">'
           
           +'<div class="lu-slash">'+fmtSlash(st.avg)+'/'+fmtSlash(st.obp)+'/'+fmtSlash(st.slg)+'</div>'
-          +'<div class="lu-counts">'+(S.era==='deadball'?Math.round((st.hr||0)+(st.h2b||0)+(st.h3b||0))+'XBH':Math.round(st.hr)+'HR')+' · '+Math.round(st.rbi)+'RBI · '+Math.round(st.runs||0)+'R</div>'
+          +'<div class="lu-counts">'+_slotCountsHtml(st)+'</div>'
         +'</div>'
       +'</div>';
     }
@@ -7595,9 +7607,7 @@ function _renderBattingOrder(stagger, pulse) {
     if (!slot) continue;
     var st = slot.player.stats || {};
     var slash = fmtSlash(st.avg) + '/' + fmtSlash(st.obp) + '/' + fmtSlash(st.slg);
-    var cnts = (S.era === 'deadball'
-      ? Math.round((st.h2b||0)+(st.h3b||0)+(st.hr||0)) + 'XBH'
-      : Math.round(st.hr||0) + 'HR') + ' &middot; ' + Math.round(st.rbi||0) + 'RBI';
+    var cnts = _slotCountsHtml(st);
     var bdg = _slotBadgesHtml(slot);
     var cls = 'bo-reveal-row bo-tappable';
     if (i === S._boSel) cls += ' bo-sel';
