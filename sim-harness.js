@@ -26,7 +26,9 @@
  */
 (function () {
   var POS_PREF = ['C','SS','2B','3B','CF','RF','LF','1B','DH'];
-  var AXES = ['woba','hr','rbi','runs','sb'];
+  // wobaPlus and tb are the PROPOSED axes (see BALANCE.md) and don't exist in
+  // ERA_SCORING yet — they're collected so ceilings can be derived for them.
+  var AXES = ['woba','wobaPlus','tb','hr','rbi','runs','sb'];
   var rosterCache = {};
 
   function isLahman(era) { return !!(ERA_CONFIG[era] && ERA_CONFIG[era].lahman); }
@@ -87,19 +89,26 @@
   }
 
   // Aggregate exactly as simulate() does, so axis numbers line up with scoring.
+  // Also collects wobaPlus (wOBA relative to that season's league average) and
+  // Total Bases, which the proposed weighting needs but ERA_SCORING has no
+  // ceilings for yet.
   function aggregate(era) {
-    var hr=0, rbi=0, runs=0, sb=0, wobaS=0, n=0;
+    var hr=0, rbi=0, runs=0, sb=0, tb=0, wobaS=0, wpS=0, n=0;
     for (var i = 0; i < 9; i++) {
       var slot = S.lineup[i], st = slot.player.stats;
       var sea = SEASON_AVG[slot.year] || SEASON_AVG[2019];
       var dur = Math.sqrt(Math.min(st.games,162)/162);
       var yw = (typeof WOBA_WEIGHTS !== 'undefined' && WOBA_WEIGHTS[slot.year]) || {};
       var lg = yw.lgWoba || sea.obp;
-      wobaS += lg + (playerWOBA(st, slot.year) - lg) * dur;
-      hr += era === 'deadball' ? ((st.hr||0)+(st.h2b||0)+(st.h3b||0)) : (st.hr||0);
+      var adj = lg + (playerWOBA(st, slot.year) - lg) * dur;
+      wobaS += adj;
+      wpS   += adj / lg;
+      tb  += st.tb||0;
+      hr  += era === 'deadball' ? ((st.hr||0)+(st.h2b||0)+(st.h3b||0)) : (st.hr||0);
       rbi += st.rbi||0; runs += st.runs||0; sb += st.sb||0; n++;
     }
-    return { woba: wobaS/n, hr: hr, rbi: rbi, runs: runs, sb: sb };
+    return { woba: wobaS/n, wobaPlus: wpS/n, tb: tb,
+             hr: hr, rbi: rbi, runs: runs, sb: sb };
   }
 
   async function playOne(era) {
@@ -156,10 +165,19 @@
     var SC = ERA_SCORING[era], out = {};
     AXES.forEach(function (a) {
       var v = aggs.map(function (r) { return r[a]; }).sort(function (x,y) { return x-y; });
-      var over = 100 * v.filter(function (x) { return x >= SC.CEIL[a]; }).length / v.length;
-      out[a] = { weight: SC.W[a], ceil: SC.CEIL[a],
-                 typical: +q(v,.5).toFixed(3), p99: +q(v,.99).toFixed(3),
-                 pctAtOrOverCeil: +over.toFixed(1), saturated: over >= 20 };
+      var dp = (a === 'woba' || a === 'wobaPlus') ? 3 : 0;
+      var cur = SC.CEIL[a];                    // undefined for the proposed axes
+      var row = { weight: SC.W[a] != null ? SC.W[a] : null,
+                  currentCeil: cur != null ? cur : null,
+                  p01: +q(v,.01).toFixed(dp), typical: +q(v,.5).toFixed(dp),
+                  p92: +q(v,.92).toFixed(dp),   // <- the ceiling BALANCE.md calls for
+                  p99: +q(v,.99).toFixed(dp) };
+      if (cur != null) {
+        var over = 100 * v.filter(function (x) { return x >= cur; }).length / v.length;
+        row.pctAtOrOverCeil = +over.toFixed(1);
+        row.saturated = over >= 20;
+      }
+      out[a] = row;
     });
     return out;
   }
