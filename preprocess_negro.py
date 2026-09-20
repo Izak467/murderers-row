@@ -19,6 +19,13 @@ Two facts from the Lahman readme drive the shape of this script:
     been found. That is why the playing-time threshold below is a fraction of
     each team-season's own documented schedule rather than a flat number --
     a flat cut would silently punish the least-recovered teams.
+
+Scoring applies no durability discount to this era, because games played here
+reflects which box scores survived more than who showed up. That puts the whole
+burden of keeping small samples out onto these thresholds: MIN_SEASON_G drops
+team-seasons with too little surviving record to say anything (they ran as low
+as six recorded games), and MIN_SEASON_FRAC keeps part-timers within the
+team-seasons that remain.
 """
 import csv, json, sys, collections, datetime
 
@@ -29,7 +36,8 @@ OUT = sys.argv[2] if len(sys.argv) > 2 else 'negro_data.js'
 # unlike the white majors, Negro League baseball ran through the war, and 1943-45
 # includes some of the best-documented seasons in the record (Gibson's 1943).
 NEL_LEAGUES = {'NNL', 'ECL', 'ANL', 'EWL', 'NSL', 'NN2', 'NAL'}
-MIN_SEASON_FRAC = 0.40   # of the team-season's best-documented games
+MIN_SEASON_G    = 30     # drop team-seasons whose surviving record is too thin
+MIN_SEASON_FRAC = 0.50   # of the team-season's best-documented games
 MIN_AB          = 20
 MIN_ROSTER      = 6      # drop team-seasons too thin to draft from
 POS_SKIP        = {'P', 'PH', 'PR'}
@@ -94,7 +102,8 @@ for (year, tid), trow in sorted(teams_tbl.items()):
     if not rows:
         continue
     season_g = max(n(r['G']) for r in rows)      # the team's documented schedule
-    if season_g <= 0:
+    if season_g < MIN_SEASON_G:
+        dropped.append(f'{year} {tid} (seasonG {season_g})')
         continue
 
     players = []

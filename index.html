@@ -1293,27 +1293,27 @@ body.era-golden::after {
 }
 
 /* Dead Ball: burgundy mahogany — horizontal scan lines (old photograph grain) */
-/* Negro Leagues: sepia rather than a saturated coffee, because Golden Age
-   already owns warm amber and Dead Ball owns wine-red. A greyed umber reads as
-   a period photograph instead of competing with either. */
+/* Negro Leagues: cognac, not a grey sepia. The first pass was too washed out to
+   hold its own — this keeps the warmth but pushes hue toward red-brown so it
+   reads distinctly against Golden Age's yellow-gold and Dead Ball's wine. */
 body.era-negro {
-  --bg: #14100c;
-  --surface: #1f1a13;
-  --surface2: #2a231a;
-  --border: #45392b;
-  --border-lt: #5d4d3a;
-  --muted: #93826a;
-  --navy-lt: #8a7053;
+  --bg: #19110a;
+  --surface: #2a1c10;
+  --surface2: #3a2817;
+  --border: #5d4227;
+  --border-lt: #7d5a33;
+  --muted: #b89065;
+  --navy-lt: #a9784a;
 }
 body.era-negro .roster-card-header,
 body.era-negro .roster-table th,
-body.era-negro .sort-bar { background: #0e0b08; }
-body.era-negro .roster-table td { border-color: #352c21; }
-body.era-negro .ls.filled { background: #191409; }
-body.era-negro .ls.moving { background: #241c11; }
+body.era-negro .sort-bar { background: #120c06; }
+body.era-negro .roster-table td { border-color: #46311c; }
+body.era-negro .ls.filled { background: #22160b; }
+body.era-negro .ls.moving { background: #30200f; }
 body.era-negro .move-banner,
-body.era-negro .confirm-bar { background: #191409; border-color: var(--gold-dk); }
-body.era-negro .lb-row { border-color: #352c21; }
+body.era-negro .confirm-bar { background: #22160b; border-color: var(--gold-dk); }
+body.era-negro .lb-row { border-color: #46311c; }
 body.era-negro .roster-table tr:hover td { background: var(--surface2); }
 body.era-negro::after {
   content: '';
@@ -1328,8 +1328,8 @@ body.era-negro::after {
    coarse halftone screen rather than a regular pattern. */
 body.era-negro::after {
   background-image:
-    radial-gradient(circle at 1px 1px, rgba(214,190,150,0.055) 0.9px, transparent 0),
-    radial-gradient(circle at 1px 1px, rgba(214,190,150,0.032) 0.7px, transparent 0);
+    radial-gradient(circle at 1px 1px, rgba(236,201,150,0.085) 0.9px, transparent 0),
+    radial-gradient(circle at 1px 1px, rgba(236,201,150,0.05) 0.7px, transparent 0);
   background-size: 5px 5px, 5px 5px;
   background-position: 0 0, 2.5px 2.5px;
 }
@@ -1402,7 +1402,7 @@ body.era-deadball::after {
 .esc-years { font-size: 10px; color: var(--muted); letter-spacing: 1.8px; text-transform: uppercase; }
 .esc-card-deadball { border-top-color: #8B2030; }
 .esc-card-golden { border-top-color: #b08820; }
-.esc-card-negro { border-top-color: #A8794A; }
+.esc-card-negro { border-top-color: #C8863C; }
 .esc-card-postwar { border-top-color: #1080a0; }
 .esc-card-nostalgia { border-top-color: #208050; }
 .esc-card-steroid { border-top-color: #8030c0; }
@@ -2185,9 +2185,14 @@ var ERA_SCORING = {
     // Speed and contact define this league's reputation more than the fence,
     // so SB carries the same weight as HR, as in Dead Ball.
     W:     { wobaPlus:.50, hr:.10, tb:.10, rbi:.10, runs:.10, sb:.10 },
-    CEIL:  { wobaPlus:1.250, hr:167, tb:2728, rbi:1063, runs:1089, sb:228 },  // p90
+    CEIL:  { wobaPlus:1.267, hr:181, tb:2838, rbi:1123, runs:1136, sb:236 },  // p94
     FLOOR: { wobaPlus:1.00,  hr:10,  tb:900,  rbi:380,  runs:360,  sb:0   },
-    exp:   2.2
+    // Lower than the other eras on purpose. With no durability discount here a
+    // flawless lineup became far too reachable — p90 ceilings put 162-0 at
+    // nearly 1% of greedy games. Higher ceilings push that back down to 0.27%,
+    // in line with Golden Age and Dead Ball, and the softer exponent brings the
+    // mean back to 110.
+    exp:   1.9
   },
   golden: {
     // Ruth era: HR suddenly matter; SB less important
@@ -5119,8 +5124,15 @@ function simulate() {
     // across schedules; 1 for every era but the Negro Leagues.
     var scale = 162 / seasonG;
 
-    // Durability: sqrt curve — regresses above-average rate performance toward the mean
-    var dur = Math.sqrt(Math.min(st.games, seasonG) / seasonG);
+    // Durability: sqrt curve — regresses above-average rate performance toward the mean.
+    // The Negro Leagues are exempt. Recorded seasons there ran from the low 30s
+    // to 99 games and varied by team within a year, so games played says more
+    // about which box scores survived than about who turned up — discounting a
+    // player for it would penalize him for the gaps in his own paper trail.
+    // Small samples are kept out of the pool up front instead, by the season
+    // and playing-time floors in preprocess_negro.py.
+    var dur = slot.player.seasonG ? 1
+            : Math.sqrt(Math.min(st.games, seasonG) / seasonG);
 
     // wOBA: durability-adjusted. League-average wOBA ≈ league OBP (by wOBA construction)
     var woba    = playerWOBA(st, slot.year);
@@ -5201,7 +5213,7 @@ function applyEraTheme(era) {
     nostalgia:{ bg:'#0a1410', surface:'#0e1c14', surface2:'#132018', border:'#1e3224', borderLt:'#2a4430', muted:'#5e7862' },
     postwar:  { bg:'#061414', surface:'#0c1e1e', surface2:'#102828', border:'#1a3838', borderLt:'#224e4e', muted:'#4a7272' },
     golden:   { bg:'#160c02', surface:'#221206', surface2:'#2e1a0a', border:'#4e3010', borderLt:'#664018', muted:'#8a6428' },
-    negro:    { bg:'#14100c', surface:'#1f1a13', surface2:'#2a231a', border:'#45392b', borderLt:'#5d4d3a', muted:'#93826a' },
+    negro:    { bg:'#19110a', surface:'#2a1c10', surface2:'#3a2817', border:'#5d4227', borderLt:'#7d5a33', muted:'#b89065' },
     deadball: { bg:'#150808', surface:'#1e1010', surface2:'#271616', border:'#3c2020', borderLt:'#502c2c', muted:'#8a5048' }
   };
   var t = themes[era] || themes.modern;
@@ -5213,7 +5225,7 @@ function applyEraTheme(era) {
   root.style.setProperty('--border',    t.border);
   root.style.setProperty('--border-lt', t.borderLt);
   root.style.setProperty('--muted',     t.muted);
-  var _accents = {deadball:'#8B2030',golden:'#b08820',negro:'#A8794A',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
+  var _accents = {deadball:'#8B2030',golden:'#b08820',negro:'#C8863C',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
   root.style.setProperty('--era-accent', _accents[era] || '#2860c0');
 }
 
@@ -5241,7 +5253,7 @@ var _ERA_ZONES = [
 // Not a member of _ERA_ZONES: those tile the timeline end to end, and this one
 // overlaps them by design. It gets its own track under the main one.
 var _NEGRO_ZONE = { era:'negro', emoji:'⭐', name:'Negro Leagues',
-                    color:'#6E5A3C', start:1920, end:1948 };
+                    color:'#8A6434', start:1920, end:1948 };
 
 var _TL_START = 1901, _TL_SPAN = 124; // 2025 - 1901
 
@@ -7345,7 +7357,7 @@ buildEraSnap();
 // move auto-submits on completion (prevents replay-until-you-win).
 var _vsChallenge = null, _vsChallengeId = null, _vsDuel = null;
 var _h2hOwnWaiting = null, _h2hNotice = null, _h2hSubmitState = null;
-var _ERA_ACCENTS = {deadball:'#8B2030',golden:'#b08820',negro:'#A8794A',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
+var _ERA_ACCENTS = {deadball:'#8B2030',golden:'#b08820',negro:'#C8863C',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
 var _ERA_LBL = {negro:'Negro Leagues',modern:'Modern',steroid:'Juiced',nostalgia:'Hardball',postwar:'Post-War',golden:'Golden Age',deadball:'Dead Ball'};
 
 // ── Local game list ──

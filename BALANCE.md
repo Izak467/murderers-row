@@ -203,23 +203,37 @@ percentile chosen so the mean lands on target.
 
 | era | mean | target | 162-rate | saturated axes |
 |---|---|---|---|---|
-| Negro Leagues | 110.0 | 110 | 0.44% | none |
+| Negro Leagues | 110.0 | 110 | 0.27% | none |
 
-Ceilings are **p90** — a lower percentile than the other eras need, because
-this era's spread is wider (sd 24 against 13-23 elsewhere). That spread is
-real and comes from the source: seasons ran 40-100 documented games, and
-scaling a 45-game season onto 162 multiplies its noise along with its totals.
+Ceilings are **p94** and the exponent is **1.9**, both different from the other
+eras, and they move together. With no durability discount (below) a flawless
+lineup got far too reachable -- p90 ceilings at exp 2.2 put 162-0 at nearly 1%
+of greedy games against 0.12-0.35% everywhere else. Raising the ceilings pushes
+that back to 0.27%; softening the exponent puts the mean back on 110. Note that
+the exponent cannot fix the perfect rate on its own -- a 162 requires every axis
+at or above its ceiling regardless of exp, so only the ceilings control it.
 
-Two things work differently here, both forced by the data:
+Three things work differently here, all forced by the data:
 
-**Season length is per team-season.** Every other era is scored against 162.
-Negro Leagues schedules varied by team within a year, so each team-season
-carries a `seasonG` -- its best-documented games played -- and durability is
-`sqrt(min(g, seasonG) / seasonG)` against that. Team games from Lahman's Teams
-table are *not* usable: the readme is explicit that player stats count games
-against all opponents while team records are league-only, so team games
-undercount. Nothing outside this era has a `seasonG`, so nothing outside this
-era changed.
+**No durability discount.** Every other era regresses rate stats by
+`sqrt(min(g,162)/162)`. This one does not. Recorded seasons ran from the low 30s
+to 99 games and varied by team within a year, so games played says more about
+which box scores survived than about who turned up; discounting a player for it
+would penalize him for the gaps in his own paper trail. The job of keeping small
+samples out moves entirely to the pool thresholds below.
+
+**Season length is per team-season.** Each team-season carries a `seasonG` --
+its best-documented games played -- used to put counting stats on a 162-game
+footing. Team games from Lahman's Teams table are *not* usable: the readme is
+explicit that player stats count games against all opponents while team records
+are league-only, so team games undercount. Nothing outside this era has a
+`seasonG`, so nothing outside this era changed.
+
+Worth being clear that the 162 scaling is **not** a penalty or a bonus. It is
+rate normalization: scaled total = per-game rate x 162, so ranking by scaled
+total is exactly ranking by rate. Dropping it would not make the era neutral
+about playing time -- it would score raw totals, making a player from an 80-game
+team worth four times one from a 20-game team for the same quality of play.
 
 **Counting stats are scaled to 162** by `162 / seasonG`, per player, since a
 lineup draws nine different team-seasons. This is what lets one set of ceilings
@@ -235,17 +249,26 @@ environment and are a reasonable borrow; the league average is not.
 
 ### Threshold
 
-Players qualify at `G >= 0.40 * seasonG` and `AB >= 20`, not a flat at-bat cut.
-The recovery of these statistics is ongoing, so a flat threshold would quietly
-punish the teams whose box scores are least recovered. The fraction also floors
-durability at 0.63 for anyone draftable. Result: a median of 11 players per
-team-season, p10 of 9, and 2% of team-seasons unable to field the core
-positions.
+Two floors, and with durability gone they carry the whole load of keeping
+unreliable samples out:
+
+- **`seasonG >= 30`** drops team-seasons whose surviving record is too thin to
+  say anything. They ran as low as six recorded games, and a six-game sample
+  scaled to 162 is pure noise. Cuts 75 of 341 team-seasons while keeping all
+  29 years.
+- **`G >= 0.50 * seasonG`** and **`AB >= 20`** keep part-timers out of the
+  team-seasons that remain, rather than a flat at-bat cut -- the recovery of
+  these statistics is ongoing, and a flat threshold would quietly punish the
+  teams whose box scores are least recovered.
+
+Result: 268 team-seasons, 2,489 players, roster median 9 and p10 8, smallest
+qualifying sample 15 games.
 
 ### Open
 
-- The perfect-season rate (0.44%) is the highest of the seven eras. Inherent to
-  the variance above; lowering it means lowering the mean.
+- Small samples still produce extreme rates; that is inherent to a fragmentary
+  record and the floors above only bound it. Raising `seasonG` further is the
+  lever if it ever feels wrong, at the cost of team-seasons.
 - No awards. The East-West Game was the biggest Black sporting event in America
   and the All-Star data is in Lahman's `AllstarFull` -- badges for it would be
   a real addition.
