@@ -1,122 +1,65 @@
-# Scoring balance — findings and open work
+# Scoring balance — applied
 
-Status as of 2026-08-13. Nothing in `ERA_SCORING` has been changed yet.
+Recalibration applied 2026-08-14. All six `ERA_SCORING` blocks and `simulate()`
+were changed together. Measured with `sim-harness.js`, greedy play (best
+available player for a position of need, DH only when it's the last slot open),
+15,000 games per Lahman era and 4,000 per MLB-API era:
 
-## The problem
+| era | mean | target | 162-rate | saturated axes |
+|---|---|---|---|---|
+| Modern | 111.6 | 110 | 0.20% | none |
+| Juiced | 117.4 | 117 | 0.35% | none |
+| Hardball | 111.0 | 110 | 0.15% | none |
+| Post-War | 109.9 | 110 | 0.12% | none |
+| Golden Age | 112.7 | 112 | 0.27% | none |
+| Dead Ball | 105.7 | 106 | 0.27% | none |
 
-Scores are not comparable across eras. Measured with `sim-harness.js`,
-2,000 greedy games per era (best available player for a position of need,
-DH only when it's the last slot open):
+Largest miss vs target 1.6 wins. Cross-era spread excluding Juiced's deliberate
+premium: **7.0 wins, down from 20.2**. No saturated axis in any era.
 
-| era | mean | median | sd | p10 | p90 | range | 140+ | =162 |
-|---|---|---|---|---|---|---|---|---|
-| Post-War | 128.6 | 130 | 13.7 | 110 | 145 | 73–161 | 24.9% | 0.00% |
-| Golden Age | 123.4 | 124 | 15.1 | 103 | 142 | 74–162 | 15.2% | 0.10% |
-| Dead Ball | 109.4 | 108 | 19.5 | 85 | 136 | 64–162 | 7.7% | 0.15% |
+Greedy is the calibration baseline — "a player who evaluates every option and
+never skips". Casual play lands lower, careful play with both skips lands
+higher. These means are not what a person scores.
 
-Modern, Juiced and Hardball are **unmeasured** — they fetch rosters from the
-MLB Stats API, which the dev sandbox blocks. Run them locally (see below).
+---
 
-## Root cause: a saturated wOBA axis
+## What was wrong
 
-wOBA carries **50% of the weight** in every era. In Post-War and Golden a
-typical good lineup is already *past* the ceiling, so that half of the score
-clamps to 1.0 and stops discriminating:
+wOBA carried 50% of the weight in every era and was compared against
+hand-picked per-era ceilings that good lineups had already passed. That half of
+the score clamped to 1.0 and stopped discriminating:
 
-| era | typical wOBA | CEIL | % of lineups at/over CEIL |
-|---|---|---|---|
-| Post-War | 0.374 | 0.368 | **72.1%** |
-| Golden Age | 0.396 | 0.392 | **63.7%** |
-| Dead Ball | 0.367 | 0.385 | 5.5% |
+| era | typical wOBA | old CEIL | % of lineups at/over CEIL | old mean |
+|---|---|---|---|---|
+| Post-War | 0.374 | 0.368 | **72.1%** | 128.6 |
+| Golden Age | 0.396 | 0.392 | **63.7%** | 123.4 |
+| Dead Ball | 0.367 | 0.385 | 5.5% | 109.4 |
 
-Dead Ball's ceiling sits correctly above what's achievable, which is why it
-still separates good lineups from great ones. **Dead Ball is the correctly
-calibrated era; the other two are inflated.**
+Dead Ball's ceiling sat correctly above what was achievable, which is why it
+still separated good lineups from great ones. It was the only correctly
+calibrated era.
 
-Secondary: Dead Ball's RBI axis is dead in the other direction — typical 522
-against a 740 ceiling, which **0.1%** of lineups ever reach. It contributes
-almost nothing while still consuming its weight.
+It was **not** the talent pool. All three average ~16 teams/year (Post-War 17.2
+after expansion) yet spanned 19 wins.
 
-### It is not the talent pool
+## What was applied
 
-The obvious hypothesis — fewer teams means a more concentrated pool — does not
-explain it. All three eras average ~16 teams/year (Post-War 17.2 after
-expansion) yet span 19 wins. Team count may still matter for modern-vs-old
-comparisons; that is untested.
+**1. wOBA+ replaces raw wOBA.** `wOBA+ = durability-adjusted wOBA / lgWoba`,
+with `lgWoba` already present per season in `woba_weights.js` (previously used
+for the durability regression, then discarded). Measuring relative to league is
+what removed the saturation.
 
-### Why Post-War never reaches 162
+**2. TB added at 10%, HR reduced.** HR is the heaviest term inside wOBA (for a
+40-HR season, 37% of that player's wOBA), *and* it is 4 bases inside TB. It was
+being counted three times. TB's weight is kept deliberately small for the same
+reason.
 
-A perfect season needs `strength ≥ 0.998` (from `wins = 42 + 120·strength^2.2`,
-capped at 162) — every axis pinned at its ceiling simultaneously. Post-War's SB
-ceiling is 180 but a typical lineup manages 62–70, with only 0.1% reaching 180.
-Needing that *and* every other axis maxed in the same game makes 162
-unreachable there: 0 perfect seasons in 2,000 games, despite the highest mean.
-Dead Ball, with the lowest mean, hit 162 most often. Post-War is compressed from
-both ends — clamped at the top, capped at the bottom.
-
-## Agreed targets (not yet applied)
-
-Mean is for the **greedy baseline**, roughly "player who evaluates every option
-and never skips". Casual play lands lower; careful play with both skips lands
-higher. Calibrate to the baseline, not to personal scores.
-
-| era | target mean | reasoning |
-|---|---|---|
-| Dead Ball | ~106 | thematically the grind era; small discount is honest |
-| Post-War / Hardball / Modern | ~110 | baseline |
-| Golden Age | ~112 | Ruth-era power, slight nudge |
-| Juiced | ~117 | genuinely inflated offence — a premium, not a chasm |
-
-Rationale: the game's tagline tiers are 130+ "Historic", 115+ "Transcendent",
-100+ "Dominant". A mean of ~110 puts average good play in "Dominant" and keeps
-the top labels meaningful. Post-War's current 128.6 makes "Historic" the
-*typical* outcome.
-
-Also target: **sd 16–20** (Post-War's 13.7 is the saturation bug, not a property
-of the era) and **0.2–0.5% perfect seasons**, so 162-0 stays a real chase.
-
-## The fix: wOBA+ instead of raw wOBA
-
-Hand-tuning six sets of wOBA ceilings is the wrong approach. The metric should
-be **relative to league**: `wOBA+ = durability-adjusted wOBA / lgWoba`, where
-`lgWoba` is already present per season in `woba_weights.js` — currently used
-for the durability regression and then discarded before normalisation.
-
-Measured over 1,500 greedy games per era:
-
-```
-              p01     p50     p99
-postwar      1.099   1.162   1.243
-golden       1.096   1.161   1.263
-deadball     1.098   1.163   1.251
-```
-
-The eras are **already balanced** on wOBA once expressed relative to league —
-a typical lineup is ~16% above league average in every era, agreeing to three
-decimal places. The entire cross-era imbalance on that axis was an artifact of
-comparing raw wOBA against hand-picked ceilings.
-
-So the wOBA axis takes **one shared FLOOR 1.10 / CEIL 1.25 for all six eras**,
-and never needs per-era tuning again — including for any era added later.
-
-### Two secondary problems with the counting stats
-
-**HR is double-counted.** It is the heaviest term inside wOBA — for a 40-HR
-season, 37% of that player's wOBA is home runs — and then HR carries another
-14–18% of the score on its own. It is also 4 bases inside Total Bases.
-
-**RBI and Runs do not transfer.** Both depend on teammates: RBI on who bats
-ahead, Runs on who bats behind. Lineups here are assembled from nine *different*
-team-seasons, so summing them measures the 1955 Dodgers' baserunners, not the
-lineup the player built. Currently 22–26% of the score. Kept, but reduced —
-they stay legible on the results card and shouldn't vanish from scoring
-entirely, or the display would be recommending a stat the game ignores.
-
-## Proposed weights ("Goldilocks")
-
-wOBA+ holds at 50%. HR down a notch. TB added at 10% (kept small precisely
-because HR already lives inside it — a home run is 4 bases). RBI and Runs
-pinned at 10% each, with the balance taken from SB.
+**3. RBI and Runs pinned at 10% each.** Both depend on teammates: RBI on who
+bats ahead, Runs on who bats behind. Lineups here are assembled from nine
+*different* team-seasons, so summing them measures the 1955 Dodgers'
+baserunners, not the lineup the player built. Reduced from 22–26% combined to a
+flat 20%, but kept — they are on the results card, and a card that recommends a
+stat the scoring ignores would be lying.
 
 | era | wOBA+ | HR | TB | RBI | Runs | SB |
 |---|---|---|---|---|---|---|
@@ -127,94 +70,126 @@ pinned at 10% each, with the balance taken from SB.
 | golden | .50 | .14 | .10 | .10 | .10 | .06 |
 | deadball | .50 | .10 | .10 | .10 | .10 | .10 |
 
-Every row sums to 1.00. Context-dependent share (RBI+Runs) drops from 22–26%
-to a flat 20%; individual-production share rises to 80%.
+**4. Every CEIL is measured, not chosen** — a percentile (p91–p95) of what
+lineups actually produce, with the percentile per era set so the mean lands on
+target. FLOORs for hr/rbi/runs/sb are unchanged.
 
-Uniform RBI/Runs costs almost nothing numerically — tested against the
-alternative (RBI/Runs .08–.10, SB up to .14) the mean moved by +0.0 to +0.5
-wins. The real cost is thematic: Dead Ball's SB weight falls .14 → .10, which
-dilutes the one axis that carried that era's identity (no home runs, steal to
-score). Worth revisiting if the eras stop feeling distinct.
+### FLOOR stays low — this is not optional
 
-## Calibration method — FLOOR stays low, CEIL at p92
-
-An early attempt set FLOOR at p01 of achievable. That is wrong: the existing
+An early attempt set FLOOR at p01 of achievable. That is wrong. The existing
 FLOORs are deliberately "theoretical bad", far below anything a real lineup
-produces (Post-War HR floor is 10, but the 1st percentile of actual lineups is
-123). That gap is what lifts a typical lineup to ~0.8 normalised. Moving FLOOR
-to p01 collapses every axis to ~0.5 and the mean falls to ~68.
+produces (Post-War HR floor is 10; the 1st percentile of actual lineups is 123).
+That gap is what lifts a typical lineup to ~0.8 normalised. Moving FLOOR to p01
+collapses every axis to ~0.5 and the mean falls to ~68. **Only the CEILs were
+broken.**
 
-**Keep the low FLOORs. Only the CEILs were broken.**
+## The shared wOBA+ ceiling did not survive contact with all six eras
 
-With FLOORs unchanged (plus `wobaPlus` FLOOR 1.00 = a league-average lineup),
-sweeping the CEIL percentile over the measured distributions:
+The original plan was one shared `FLOOR 1.10 / CEIL 1.25` for every era, on the
+strength of the three Lahman eras agreeing to three decimals (p50 ≈ 1.162). That
+agreement is real but does not extend to the MLB-API eras:
 
+| era | wOBA+ p50 | wOBA+ p92 |
+|---|---|---|
+| Modern | 1.136 | 1.173 |
+| Juiced | 1.140 | 1.186 |
+| Hardball | 1.152 | 1.187 |
+| Post-War | 1.159 | 1.211 |
+| Golden Age | 1.160 | 1.214 |
+| Dead Ball | 1.163 | 1.210 |
+
+Applying a shared 1.21 gives means of 99.6 / 105.0 / 105.2 / 109.9 / 110.5 /
+109.4 — an 11-win spread with Modern 10 wins adrift, which is the same
+incomparability the recalibration exists to remove. Per-era measured ceilings
+cut it to 4.1 wins on the same data.
+
+So the **method** survives (ceiling = a measured percentile) and the
+**shortcut** does not (one shared number). The per-era percentiles land at
+p91–p95, tightly clustered around the p92 the shared-ceiling analysis proposed,
+so this is a refinement rather than a different approach.
+
+Older eras appear to have genuinely wider talent dispersion above league
+average — Ruth and Cobb were further clear of their peers than today's stars
+are — which is a real property of the eras, not an artifact.
+
+## 162-0
+
+**SB is the binding constraint in every era.** Among the top 5% of lineups every
+other axis sits at 0.94–1.00 normalised while SB sits at 0.72–0.91. SB is also
+the axis least correlated with the offensive core — essentially zero or negative
+against HR in four of six eras (Golden −0.06, Post-War −0.03, Hardball −0.03).
+Sluggers do not steal, so pinning both at once is the conflict that makes a
+perfect season hard. Dead Ball is the exception (SB↔HR 0.33, SB↔Runs 0.65),
+where stealing was part of the offensive engine.
+
+**The multiplier cannot be improved.** `wins = 42 + 120·strength^exp` capped at
+162, and 42 + 120 = **exactly** 162. So:
+
+- M = 120 is the *smallest* multiplier for which 162 is reachable at all —
+  anything lower puts the formula's maximum below 162 and makes a perfect
+  season impossible by construction;
+- every increase makes 162 *more* common, not less (M = 124 pushes Juiced to
+  2.9%).
+
+M = 120 is therefore simultaneously the minimum for attainability and the
+setting producing the rarest perfect seasons. There is no knob here. The
+measured 0.12–0.35% is the floor of what this formula can deliver while keeping
+162 possible.
+
+**Do not trust small-sample perfect-season rates.** At a true rate of 0.2%, a
+250-game run expects 0.5 perfect seasons and a 800-game run expects 1.6. During
+this work Modern read 0.4% at n=250, 0% at n=800, and 0.20% at n=4,000; Golden
+read 0.47% at n=1,500 and 0.27% at n=15,000. Anything below a few thousand games
+per era is noise at this resolution.
+
+## Harness changes
+
+`sim-harness.js` now measures `wobaPlus` and `tb` alongside the original axes,
+tolerates an axis with no ceiling yet (that measurement is what a new axis's
+ceiling gets calibrated from), reports p01/p50/p92/p99 per axis, and keeps the
+raw per-game aggregates from the last run so ceilings can be re-cut at a
+different percentile without replaying games:
+
+```js
+var s=document.createElement('script'); s.src='/sim-harness.js'; document.head.appendChild(s);
+await mrReport(null, 2000, true)   // all six eras
+mrCeils(0.92)                      // proposed CEILs from that run
+mrCeils(0.85, ['steroid'])         // lower percentile = higher mean
 ```
-CEIL      mean (pw/gold/dead)   spread   sd    150+   perfect  saturated axes
-p99        93.8  89.8  90.4      4.0    18.2   0.4%    0.00%      0/18
-p97       101.4  98.2 100.0      3.1    20.7   1.7%    0.11%      0/18
-p95       105.4 102.8 104.1      2.6    21.7   3.0%    0.13%      0/18
-p92       110.8 108.7 109.3      2.1    22.7   5.6%    0.18%      0/18   <-- use this
-p90       113.8 111.2 112.2      2.6    23.1   7.1%    0.38%      0/18
-p85       119.7 117.7 117.3      2.3    23.6  11.7%    0.82%      0/18
-```
 
-**p92 hits every target**: mean ~110, era spread 2.1 wins (down from 19), no
-saturated axis anywhere, 0.18% perfect seasons. sd ~23 is a little wider than
-the 16–20 originally suggested, which is an improvement — more separation
-between a good game and a great one.
-
-Juiced can be given its ~117 premium by using a lower percentile (p85) for that
-era alone, once it has been measured.
-
-## Measured ceilings (p92) for the three tested eras
-
-```
-wobaPlus   CEIL 1.21   FLOOR 1.00     (shared; measured p92 = 1.211 / 1.218 / 1.211)
-
-postwar    tb 2439  hr 236  rbi 820  runs 817  sb 115
-golden     tb 2544  hr 181  rbi 904  runs 897  sb 122
-deadball   tb 1971  hr 383  rbi 630  runs 721  sb 287
-```
-
-Existing FLOORs for hr/rbi/runs/sb are unchanged. TB floor ≈ 55% of p01.
-
-**Modern, Juiced and Hardball still need measuring** — TB is a new axis with no
-ceiling at all for them. Run `mrReport()` on a machine with MLB API access (see
-below), then apply all six eras in one change; recalibrating some now and others
-later leaves them mutually incomparable in between.
+The MLB-API path, previously untested, runs clean: 2,894 requests, zero
+failures.
 
 ## Open work
 
-1. Measure Modern, Juiced and Hardball. On a machine with MLB API access, open
-   `murderers-row.net`, then in the console:
+1. **Dead Ball's SB weight fell .14 → .10** to make room for TB. That dilutes
+   the one axis carrying that era's identity (no home runs, steal to score).
+   Numerically it costs almost nothing — the alternative (RBI/Runs .08–.10, SB
+   up to .14) moved the mean by +0.0 to +0.5 wins — so this is a feel question,
+   not a math one. First thing to revisit if the eras stop feeling distinct.
 
-   ```js
-   var s=document.createElement('script'); s.src='/sim-harness.js'; document.head.appendChild(s);
-   await mrReport()            // the 3 API eras
-   await mrReport(null,200,true)  // all six, cross-checks the numbers above
-   ```
+2. **Juiced and Golden sit slightly above a 0.2% perfect-season preference**
+   (0.35% and 0.27%). Both are eras where a perfect lineup arguably *should* be
+   more achievable. Nudging just those two CEIL blocks up would fix it at a cost
+   of roughly a win of mean each.
 
-   The MLB-API path in the harness has never executed — it could not be tested
-   from the sandbox. If it errors, that is the first thing to fix.
+3. **Two dead references to the old axis set**: `_playerScore` (declared, never
+   called — it would return `NaN` now) and the legacy `W`/`CEIL`/`FLOOR` aliases
+   below `ERA_SCORING`. Both were already unused; they were left alone as
+   outside the recalibration, but they now describe a scoring scheme that no
+   longer exists.
 
-2. Recalibrate all six `ERA_SCORING` FLOOR/CEIL blocks from the combined data.
-
-3. Re-run the harness to confirm the means land on target.
-
-## Caveats on the numbers
+## Caveats
 
 - The greedy is **myopic**: it maximises the current partial score with no
-  lookahead, and does not reason about which positions get hard to fill. A
-  careful human beats it.
+  lookahead and does not reason about which positions get hard to fill.
 - It **never uses skips**, though real players get one team and one year skip.
 
-Both mean real best-play scores run higher than the table above, which makes the
-Post-War compression worse in practice than it looks.
+Both mean real best-play scores run above these means.
 
-## Note before applying
+## Before anyone plays
 
-Recalibrating changes everyone's scores: existing personal bests and any live
-leaderboard entries become non-comparable to new ones. `pb_*` fields live in
+Recalibrating changed everyone's scores. Existing personal bests and any live
+leaderboard entries are not comparable to new ones. `pb_*` fields live in
 `users/{uid}` and daily scores in the per-era collections; neither is versioned
 by scoring formula.

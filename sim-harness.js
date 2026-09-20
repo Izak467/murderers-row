@@ -19,6 +19,11 @@
  *   await mrReport(['modern'], 200)      // a single era
  *   await mrReport(null, 200, true)      // all six eras
  *
+ * then, to turn that measurement into ceilings (see BALANCE.md):
+ *
+ *   mrCeils(0.92)                        // proposed CEILs from the last run
+ *   mrCeils(0.85, ['steroid'])           // a lower percentile = a higher mean
+ *
  * Modern / Juiced / Hardball fetch rosters from the MLB Stats API, so the first
  * pass is slow while it walks team+year combinations. Rosters are cached for
  * the run, so it speeds up substantially after the first ~50 games. Leave the
@@ -26,8 +31,8 @@
  */
 (function () {
   var POS_PREF = ['C','SS','2B','3B','CF','RF','LF','1B','DH'];
-  // wobaPlus and tb are the PROPOSED axes (see BALANCE.md) and don't exist in
-  // ERA_SCORING yet — they're collected so ceilings can be derived for them.
+  // wobaPlus and tb are measured even before ERA_SCORING carries ceilings for
+  // them — that measurement is what the ceilings get calibrated from.
   var AXES = ['woba','wobaPlus','tb','hr','rbi','runs','sb'];
   var rosterCache = {};
 
@@ -89,11 +94,8 @@
   }
 
   // Aggregate exactly as simulate() does, so axis numbers line up with scoring.
-  // Also collects wobaPlus (wOBA relative to that season's league average) and
-  // Total Bases, which the proposed weighting needs but ERA_SCORING has no
-  // ceilings for yet.
   function aggregate(era) {
-    var hr=0, rbi=0, runs=0, sb=0, tb=0, wobaS=0, wpS=0, n=0;
+    var hr=0, rbi=0, runs=0, sb=0, tb=0, wobaS=0, wobaPlusS=0, n=0;
     for (var i = 0; i < 9; i++) {
       var slot = S.lineup[i], st = slot.player.stats;
       var sea = SEASON_AVG[slot.year] || SEASON_AVG[2019];
@@ -102,12 +104,14 @@
       var lg = yw.lgWoba || sea.obp;
       var adj = lg + (playerWOBA(st, slot.year) - lg) * dur;
       wobaS += adj;
-      wpS   += adj / lg;
-      tb  += st.tb||0;
-      hr  += era === 'deadball' ? ((st.hr||0)+(st.h2b||0)+(st.h3b||0)) : (st.hr||0);
+      // Relative to the player's own league-season, so eras are comparable
+      // without per-era ceilings.
+      wobaPlusS += lg ? adj / lg : 1;
+      hr += era === 'deadball' ? ((st.hr||0)+(st.h2b||0)+(st.h3b||0)) : (st.hr||0);
+      tb += st.tb||0;
       rbi += st.rbi||0; runs += st.runs||0; sb += st.sb||0; n++;
     }
-    return { woba: wobaS/n, wobaPlus: wpS/n, tb: tb,
+    return { woba: wobaS/n, wobaPlus: wobaPlusS/n, tb: tb,
              hr: hr, rbi: rbi, runs: runs, sb: sb };
   }
 
@@ -165,19 +169,18 @@
     var SC = ERA_SCORING[era], out = {};
     AXES.forEach(function (a) {
       var v = aggs.map(function (r) { return r[a]; }).sort(function (x,y) { return x-y; });
+      var ceil = SC.CEIL[a];
+      // An axis with no ceiling yet (a newly added one) is still worth
+      // measuring — the percentiles below are what its ceiling comes from.
+      var over = ceil == null ? null
+        : +(100 * v.filter(function (x) { return x >= ceil; }).length / v.length).toFixed(1);
+      // Rate axes read as decimals, counting axes as whole numbers — a total
+      // bases ceiling printed as 2512.000 is just noise to scan past.
       var dp = (a === 'woba' || a === 'wobaPlus') ? 3 : 0;
-      var cur = SC.CEIL[a];                    // undefined for the proposed axes
-      var row = { weight: SC.W[a] != null ? SC.W[a] : null,
-                  currentCeil: cur != null ? cur : null,
-                  p01: +q(v,.01).toFixed(dp), typical: +q(v,.5).toFixed(dp),
-                  p92: +q(v,.92).toFixed(dp),   // <- the ceiling BALANCE.md calls for
-                  p99: +q(v,.99).toFixed(dp) };
-      if (cur != null) {
-        var over = 100 * v.filter(function (x) { return x >= cur; }).length / v.length;
-        row.pctAtOrOverCeil = +over.toFixed(1);
-        row.saturated = over >= 20;
-      }
-      out[a] = row;
+      out[a] = { weight: SC.W[a] == null ? null : SC.W[a], ceil: ceil == null ? null : ceil,
+                 p01: +q(v,.01).toFixed(dp), typical: +q(v,.5).toFixed(dp),
+                 p92: +q(v,.92).toFixed(dp), p99: +q(v,.99).toFixed(dp),
+                 pctAtOrOverCeil: over, saturated: over != null && over >= 20 };
     });
     return out;
   }
@@ -199,6 +202,33 @@
 
   window.mrSimAll = function (n) { return window.mrReport(null, n, true); };
 
+  // Raw per-game aggregates from the last mrReport, kept so ceilings can be
+  // re-cut at a different percentile without replaying the games (the MLB-API
+  // eras are far too slow to re-run just to try p90 instead of p92).
+  var lastAggs = {};
+  window.mrLastAggs = lastAggs;
+
+  // Proposed CEILs at a given percentile of what lineups actually achieve.
+  // This is the calibration step: CEIL = p<pct> of the measured distribution.
+  window.mrCeils = function (pct, eras) {
+    pct = pct || 0.92;
+    eras = eras || Object.keys(lastAggs);
+    var out = {};
+    eras.forEach(function (era) {
+      var aggs = lastAggs[era];
+      if (!aggs || !aggs.length) { console.warn('no measured games for ' + era); return; }
+      out[era] = {};
+      AXES.forEach(function (a) {
+        var v = aggs.map(function (r) { return r[a]; }).sort(function (x,y) { return x-y; });
+        var c = q(v, pct);
+        // Counting stats are whole numbers; rates keep three decimals.
+        out[era][a] = (a === 'woba' || a === 'wobaPlus') ? +c.toFixed(3) : Math.round(c);
+      });
+    });
+    console.log('CEILs at p' + Math.round(pct*100) + ':\n' + JSON.stringify(out, null, 2));
+    return out;
+  };
+
   // The one to run. Prints a copy-pasteable JSON block at the end.
   window.mrReport = async function (eras, n, all) {
     n = n || 200;
@@ -209,6 +239,7 @@
       console.log('=== %s (%d games) ===', era, n);
       var r = await playMany(era, n);
       if (!r.wins.length) { console.warn('  no completed games for ' + era); continue; }
+      lastAggs[era] = r.aggs;
       out[era] = { score: scoreStats(r.wins), axes: axisStats(era, r.aggs), seconds: r.seconds };
       var st = out[era].score;
       var sat = AXES.filter(function (a) { return out[era].axes[a].saturated; });

@@ -1996,45 +1996,68 @@ var ERA_CONFIG = {
 };
 
 // ─── Era-specific scoring (ceiling/floor for final lineup totals) ─────────────
-// wOBA replaces avg/obp/slg — computed per-player from component stats, durability-adjusted
-// Counting stats summed across lineup; era weights reflect each era's historical context
+// See BALANCE.md for the full derivation. In short:
+//
+// The rate axis is wOBA+ (durability-adjusted wOBA / league wOBA), not raw
+// wOBA. Raw wOBA was compared against hand-picked per-era ceilings that a good
+// lineup had already blown past — 72% of Post-War lineups sat at or over the
+// ceiling, so half the score stopped discriminating and that era's mean ran 19
+// wins above Dead Ball's. Measuring relative to league removes that entirely.
+//
+// TB is a real axis at 10%, and HR came down to compensate: HR is already the
+// heaviest term inside wOBA and is 4 bases inside TB, so it was being counted
+// three times. RBI and Runs are pinned at 10% each — both depend on teammates
+// the player never had here, since the nine slots come from nine different
+// team-seasons — but they stay in scoring because the results card shows them.
+//
+// Every CEIL below is measured, not chosen: it is a percentile of what 250
+// (API eras) / 1,500 (Lahman eras) greedy lineups actually produce, with the
+// percentile per era set so the mean lands on that era's target. FLOORs for
+// hr/rbi/runs/sb are the original "theoretical bad" values and are deliberately
+// far below anything achievable — moving them to a measured percentile collapses
+// every axis toward 0.5. Regenerate all of this with sim-harness.js: mrReport()
+// then mrCeils().
 var ERA_SCORING = {
   modern: {
-    W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
-    CEIL:  { woba:.365, hr:270, rbi:860, runs:840, sb:178 },
-    FLOOR: { woba:.285, hr:30,  rbi:450, runs:430, sb:0   },
+    W:     { wobaPlus:.50, hr:.12, tb:.10, rbi:.10, runs:.10, sb:.08 },
+    CEIL:  { wobaPlus:1.183, hr:265, tb:2512, rbi:811, runs:821, sb:154 },  // p95
+    FLOOR: { wobaPlus:1.00,  hr:30,  tb:955,  rbi:450, runs:430, sb:0   },
     exp:   2.2
   },
   steroid: {
-    W:     { woba:.50, hr:.20, rbi:.12, runs:.12, sb:.06 },
-    CEIL:  { woba:.376, hr:295, rbi:970, runs:930, sb:110 },
-    FLOOR: { woba:.290, hr:35,  rbi:490, runs:460, sb:0   },
+    // Genuinely inflated offence, so it keeps a premium — a lower ceiling
+    // percentile (p88) rather than a different formula.
+    W:     { wobaPlus:.50, hr:.14, tb:.10, rbi:.10, runs:.10, sb:.06 },
+    CEIL:  { wobaPlus:1.190, hr:273, tb:2651, rbi:895, runs:886, sb:145 },  // p91
+    FLOOR: { wobaPlus:1.00,  hr:35,  tb:1040, rbi:490, runs:460, sb:0   },
     exp:   2.1
   },
   nostalgia: {
-    W:     { woba:.50, hr:.14, rbi:.12, runs:.12, sb:.12 },
-    CEIL:  { woba:.375, hr:240, rbi:855, runs:840, sb:270 },
-    FLOOR: { woba:.280, hr:20,  rbi:400, runs:390, sb:0   },
+    W:     { wobaPlus:.50, hr:.11, tb:.10, rbi:.10, runs:.10, sb:.09 },
+    CEIL:  { wobaPlus:1.195, hr:216, tb:2406, rbi:777, runs:799, sb:211 },  // p94
+    FLOOR: { wobaPlus:1.00,  hr:20,  tb:925,  rbi:400, runs:390, sb:0   },
     exp:   2.2
   },
   postwar: {
-    W:     { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 },
-    CEIL:  { woba:.368, hr:225, rbi:800, runs:785, sb:180 },
-    FLOOR: { woba:.275, hr:10,  rbi:380, runs:350, sb:0   },
+    W:     { wobaPlus:.50, hr:.12, tb:.10, rbi:.10, runs:.10, sb:.08 },
+    CEIL:  { wobaPlus:1.221, hr:236, tb:2447, rbi:821, runs:819, sb:112 },  // p94
+    FLOOR: { wobaPlus:1.00,  hr:10,  tb:945,  rbi:380, runs:350, sb:0   },
     exp:   2.2
   },
   golden: {
-    // Ruth era: HR suddenly matter; RBI weight up; SB less important
-    W:     { woba:.50, hr:.18, rbi:.14, runs:.12, sb:.06 },
-    CEIL:  { woba:.392, hr:215, rbi:940, runs:900, sb:125 },
-    FLOOR: { woba:.290, hr:8,   rbi:390, runs:370, sb:0   },
+    // Ruth era: HR suddenly matter; SB less important
+    W:     { wobaPlus:.50, hr:.14, tb:.10, rbi:.10, runs:.10, sb:.06 },
+    CEIL:  { wobaPlus:1.219, hr:178, tb:2526, rbi:881, runs:892, sb:111 },  // p91
+    FLOOR: { wobaPlus:1.00,  hr:8,   tb:995,  rbi:390, runs:370, sb:0   },
     exp:   2.2
   },
   deadball: {
-    // Pre-HR era: triples (HR+3B combined) are the power metric; SB and runs dominated
-    W:     { woba:.50, hr:.14, rbi:.12, runs:.10, sb:.14 },
-    CEIL:  { woba:.385, hr:360, rbi:740, runs:760, sb:290 },
-    FLOOR: { woba:.275, hr:150, rbi:330, runs:340, sb:20  },
+    // Pre-HR era: extra-base hits (HR+2B+3B combined) are the power metric.
+    // SB weight fell .14 → .10 to make room for TB; if the eras stop feeling
+    // distinct, this is the first knob to revisit (BALANCE.md).
+    W:     { wobaPlus:.50, hr:.10, tb:.10, rbi:.10, runs:.10, sb:.10 },
+    CEIL:  { wobaPlus:1.218, hr:391, tb:2001, rbi:644, runs:734, sb:287 },  // p94
+    FLOOR: { wobaPlus:1.00,  hr:150, tb:750,  rbi:330, runs:340, sb:20  },
     exp:   2.2
   }
 };
@@ -4906,8 +4929,8 @@ function isEnhanced(name, year) {
 
 function simulate() {
   var SC = ERA_SCORING[S.era || 'modern'];
-  var hr=0, rbi=0, runs=0, sb=0, totalGames=0;
-  var wobaS=0, avgS=0, obpS=0, slgS=0, n=0;
+  var hr=0, rbi=0, runs=0, sb=0, tb=0, totalGames=0;
+  var wobaS=0, wobaPlusS=0, avgS=0, obpS=0, slgS=0, n=0;
 
   for (var i = 0; i < 9; i++) {
     var slot = S.lineup[i];
@@ -4922,10 +4945,18 @@ function simulate() {
     var woba    = playerWOBA(st, slot.year);
     var yw      = (WOBA_WEIGHTS && WOBA_WEIGHTS[slot.year]) || {};
     var seaWoba = yw.lgWoba || sea.obp;
-    wobaS += seaWoba + (woba - seaWoba) * dur;
+    var wobaAdj = seaWoba + (woba - seaWoba) * dur;
+    wobaS += wobaAdj;
+
+    // wOBA+ : the same durability-adjusted wOBA expressed relative to the
+    // player's own league-season. This is what makes eras comparable — a
+    // typical lineup lands ~16% above league average in every era, so one
+    // shared floor/ceiling works everywhere and no era needs hand-tuning.
+    wobaPlusS += seaWoba ? wobaAdj / seaWoba : 1;
 
     // Counting stats: raw totals scale naturally with games played
     hr   += S.era === 'deadball' ? ((st.hr||0) + (st.h2b||0) + (st.h3b||0)) : st.hr;
+    tb   += st.tb || 0;
     rbi  += st.rbi;
     runs += st.runs;
     sb   += st.sb;
@@ -4936,8 +4967,9 @@ function simulate() {
 
   var agg = {
     woba: n ? wobaS/n : 0,
+    wobaPlus: n ? wobaPlusS/n : 0,
     avg:  n ? avgS/n  : 0, obp: n ? obpS/n : 0, slg: n ? slgS/n : 0,
-    hr: hr, rbi: rbi, runs: runs, sb: sb,
+    hr: hr, tb: tb, rbi: rbi, runs: runs, sb: sb,
     games: totalGames
   };
 
