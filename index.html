@@ -727,6 +727,7 @@ body::before {
 .result-record.bad          { color: #c07070; }
 .result-tagline { font-size: 15px; font-family: Georgia,serif; font-style: italic; color: var(--muted); margin-top: 6px; }
 
+.scale-note { text-align: center; font-size: 10px; color: var(--muted); padding: 6px 10px 0; line-height: 1.45; }
 .sb-total { text-align: center; font-size: 11px; color: var(--muted); padding-top: 8px; margin-top: 4px; letter-spacing: 0.5px; }
 
 /* Results section dividers */
@@ -1110,7 +1111,8 @@ body::before {
 .era-desc-area { padding: 18px 20px 14px; min-height: 80px; }
 .era-desc-text { font-size: 13px; color: var(--cream-dim); line-height: 1.65; }
 .era-desc-note { display: none; font-size: 10px; color: var(--muted); margin-top: 5px; letter-spacing: .2px; }
-body.era-deadball .era-desc-note { display: block; }
+body.era-deadball .era-desc-note-xbh { display: block; }
+body.era-negro    .era-desc-note-scale { display: block; }
 .era-actions {
   display: flex; align-items: center; gap: 12px;
   padding: 0 20px 18px;
@@ -1150,6 +1152,12 @@ body.era-deadball .era-desc-note { display: block; }
 .era-panel.era-locked .era-tab:not(.active) { opacity: 0.3; pointer-events: none; }
 .era-panel.era-locked #era-slider-wrap { opacity: 0.3; pointer-events: none; }
 .era-panel.era-locked .era-snap-card:not(.esc-active) { opacity: 0.3; pointer-events: none; }
+.data-credit {
+  font-size: 10px; line-height: 1.55; color: var(--muted);
+  padding: 12px 16px 2px; border-top: 1px solid var(--border); margin-top: 12px;
+}
+.data-credit a { color: var(--muted); text-decoration: underline; }
+.data-credit a:hover { color: var(--cream-dim); }
 .era-lock-note {
   display: none;
   font-size: 10px; color: var(--era-accent);
@@ -1285,6 +1293,47 @@ body.era-golden::after {
 }
 
 /* Dead Ball: burgundy mahogany — horizontal scan lines (old photograph grain) */
+/* Negro Leagues: sepia rather than a saturated coffee, because Golden Age
+   already owns warm amber and Dead Ball owns wine-red. A greyed umber reads as
+   a period photograph instead of competing with either. */
+body.era-negro {
+  --bg: #14100c;
+  --surface: #1f1a13;
+  --surface2: #2a231a;
+  --border: #45392b;
+  --border-lt: #5d4d3a;
+  --muted: #93826a;
+  --navy-lt: #8a7053;
+}
+body.era-negro .roster-card-header,
+body.era-negro .roster-table th,
+body.era-negro .sort-bar { background: #0e0b08; }
+body.era-negro .roster-table td { border-color: #352c21; }
+body.era-negro .ls.filled { background: #191409; }
+body.era-negro .ls.moving { background: #241c11; }
+body.era-negro .move-banner,
+body.era-negro .confirm-bar { background: #191409; border-color: var(--gold-dk); }
+body.era-negro .lb-row { border-color: #352c21; }
+body.era-negro .roster-table tr:hover td { background: var(--surface2); }
+body.era-negro::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+/* Newsprint halftone. These statistics were recovered from box scores in the
+   Black press — the Pittsburgh Courier, the Chicago Defender — so the era wears
+   the texture of the paper it survived on. Two offset dot grids read as a
+   coarse halftone screen rather than a regular pattern. */
+body.era-negro::after {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(214,190,150,0.055) 0.9px, transparent 0),
+    radial-gradient(circle at 1px 1px, rgba(214,190,150,0.032) 0.7px, transparent 0);
+  background-size: 5px 5px, 5px 5px;
+  background-position: 0 0, 2.5px 2.5px;
+}
+
 body.era-deadball {
   --bg: #150808;
   --surface: #1e1010;
@@ -1353,6 +1402,7 @@ body.era-deadball::after {
 .esc-years { font-size: 10px; color: var(--muted); letter-spacing: 1.8px; text-transform: uppercase; }
 .esc-card-deadball { border-top-color: #8B2030; }
 .esc-card-golden { border-top-color: #b08820; }
+.esc-card-negro { border-top-color: #A8794A; }
 .esc-card-postwar { border-top-color: #1080a0; }
 .esc-card-nostalgia { border-top-color: #208050; }
 .esc-card-steroid { border-top-color: #8030c0; }
@@ -1400,6 +1450,26 @@ body.era-deadball::after {
   box-shadow: 0 0 10px rgba(212,175,55,.8), 0 1px 4px rgba(0,0,0,.5);
 }
 .era-slider-handle:active { cursor: grabbing; }
+/* The Negro Leagues ran 1920-1948, the same years as Golden Age and the start
+   of Post-War, because Black players were barred from those leagues. It gets
+   its own track under the main one rather than a slice inside it — the overlap
+   is the historical point, not a layout problem to solve away. */
+.era-parallel { position: relative; height: 26px; margin-top: 3px; }
+.era-parallel-zone {
+  position: absolute; top: 0; height: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  border-radius: 5px; cursor: pointer; overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,.5);
+  transition: filter .15s, opacity .15s;
+}
+.era-parallel-zone:not(.era-zone-active) { opacity: .72; }
+.era-parallel-zone.era-zone-active { filter: brightness(1.35); opacity: 1; }
+.era-parallel-zone .era-zone-emoji { font-size: 12px; }
+.era-parallel-zone .era-zone-name { margin-top: 0; font-size: 8.5px; }
+.era-parallel-rule {
+  position: absolute; top: 50%; height: 1px; background: var(--border-lt);
+  opacity: .5;
+}
 .era-slider-ticks { position: relative; height: 22px; margin-top: 4px; }
 .era-tick {
   position: absolute; transform: translateX(-50%);
@@ -1605,6 +1675,11 @@ body.era-deadball::after {
         <span class="era-tab-name">Golden Age</span>
         <span class="era-tab-years">1920 – 1942</span>
       </button>
+      <button class="era-tab" data-era="negro" onclick="selectEraFromTab('negro')">
+        <span class="era-tab-icon">⭐</span>
+        <span class="era-tab-name">Negro Leagues</span>
+        <span class="era-tab-years">1920 – 1948</span>
+      </button>
       <button class="era-tab" data-era="postwar" onclick="selectEraFromTab('postwar')">
         <span class="era-tab-icon">⚾</span>
         <span class="era-tab-name">Post-War</span>
@@ -1630,7 +1705,8 @@ body.era-deadball::after {
     <div id="era-slider-wrap"></div>
     <div class="era-desc-area">
       <div class="era-desc-text" id="era-desc-text">Launch angles are optimized, the shift is banned, and every front office has a MIT grad running the numbers. From Pujols to Ohtani, the deepest and most statistically analyzed player pool in history. Build wisely.</div>
-      <div class="era-desc-note">* XBH (2B+3B+HR) replaces HR in scoring for this era</div>
+      <div class="era-desc-note era-desc-note-xbh">* XBH (2B+3B+HR) replaces HR in scoring for this era</div>
+      <div class="era-desc-note era-desc-note-scale">* Seasons ran roughly 40–100 league games. Player cards show real totals; team totals are scaled to 162 games</div>
     </div>
     <div class="era-lock-note" id="era-lock-note"></div>
     <div class="era-actions">
@@ -1640,6 +1716,13 @@ body.era-deadball::after {
         <span class="hard-toggle-label">☠ Hard Mode</span>
       </label>
       <button class="era-start-btn" onclick="startSelectedEra()">▶ Start</button>
+    </div>
+    <div class="data-credit">
+      Historical statistics from the <a href="https://sabr.org/lahman-database/" target="_blank" rel="noopener">SABR Lahman Baseball Database</a>
+      (CC&nbsp;BY-SA&nbsp;3.0). Negro Leagues data licensed from
+      <a href="https://www.seamheads.com/NegroLgs/" target="_blank" rel="noopener">Seamheads.com</a>,
+      following SABR's Negro Leagues Task Force and Special Committee recommendations.
+      Modern seasons from the MLB Stats API. The recovery of Negro Leagues statistics is ongoing.
     </div>
   </div>
 
@@ -1840,6 +1923,7 @@ body.era-deadball::after {
     <div class="res-divider">Team Totals</div>
     <div class="agg-row" id="agg-row"></div>
     <div class="sb-total" id="sb-total"></div>
+    <div class="scale-note" id="scale-note" style="display:none"></div>
     <div class="res-divider">Patience vs Power</div>
     <div id="dash-plot"></div>
     <div class="res-divider">Leaders</div>
@@ -1995,6 +2079,26 @@ var ERA_CONFIG = {
       tb:[55,170,345],sb:[0,8,65]
     }
   },
+  negro: {
+    name: 'Negro Leagues',
+    // The seven leagues SABR and MLB recognize as major. The WWII years stay in
+    // — unlike the white majors, Negro League baseball ran straight through the
+    // war, and 1943-45 holds some of the best-documented seasons on record.
+    yearPool: [1920,1921,1922,1923,1924,1925,1926,1927,1928,1929,1930,1931,1932,1933,1934,
+               1935,1936,1937,1938,1939,1940,1941,1942,1943,1944,1945,1946,1947,1948],
+    seasonScale: {},
+    showSS: false, showASG: false, showROY: false, showMVP: false,
+    lahman: true, negro: true,
+    fbColl: 'scores_negro', fbCollHard: 'hardScores_negro',
+    // Ranges are read against a player's RAW line, which is a 40-100 game
+    // season here — not the 162-game totals the results card shows.
+    statRanges: {
+      g:[15,45,95],   avg:[0.230,0.300,0.400], woba:[0.300,0.360,0.450],
+      obp:[0.290,0.360,0.470], slg:[0.310,0.430,0.650], ops:[0.600,0.790,1.120],
+      r:[5,30,80],    hr:[0,4,20],             rbi:[5,30,80],
+      tb:[25,110,240],sb:[0,6,30]
+    }
+  },
   golden: {
     name: 'Golden Age',
     yearPool: [1920,1921,1922,1923,1924,1925,1926,1927,1928,1929,1930,1931,1932,1933,1934,1935,1936,1937,1938,1939,1940,1941,1942],
@@ -2074,6 +2178,17 @@ var ERA_SCORING = {
     FLOOR: { wobaPlus:1.00,  hr:10,  tb:945,  rbi:380, runs:350, sb:0   },
     exp:   2.2
   },
+  negro: {
+    // Speed and contact over the fence — a live-ball league that still ran.
+    // Counting stats reaching these ceilings are 162-game scalings of 40-100
+    // game seasons, so they are projections, not records anyone set.
+    // Speed and contact define this league's reputation more than the fence,
+    // so SB carries the same weight as HR, as in Dead Ball.
+    W:     { wobaPlus:.50, hr:.10, tb:.10, rbi:.10, runs:.10, sb:.10 },
+    CEIL:  { wobaPlus:1.250, hr:167, tb:2728, rbi:1063, runs:1089, sb:228 },  // p90
+    FLOOR: { wobaPlus:1.00,  hr:10,  tb:900,  rbi:380,  runs:360,  sb:0   },
+    exp:   2.2
+  },
   golden: {
     // Ruth era: HR suddenly matter; SB less important
     W:     { wobaPlus:.50, hr:.14, tb:.10, rbi:.10, runs:.10, sb:.06 },
@@ -2092,10 +2207,6 @@ var ERA_SCORING = {
   }
 };
 
-// Legacy aliases — kept for any external references; scoring driven by ERA_SCORING above
-var W     = { woba:.50, hr:.16, rbi:.12, runs:.12, sb:.10 };
-var CEIL  = { woba:.360, hr:235, rbi:800, runs:800, sb:160 };
-var FLOOR = { woba:.285, hr:30,  rbi:450, runs:430, sb:0   };
 
 // MLB league averages by season — rate stats used for durability-adjusted normalization
 var SEASON_AVG = {
@@ -4665,7 +4776,7 @@ function getAwardBadgesHtml(player, year) {
   if (S.era === 'steroid' && isEnhanced(player.name, year)) {
     html += '<span class="award-badge award-peds" title="Mitchell Report / confirmed PED use — HR ceiling raised in scoring">'+_svgNeedle(14)+'</span>';
   }
-  if (({deadball:1,golden:1,postwar:1,nostalgia:1}[S.era]) && ((HOF_PLAYERS && HOF_PLAYERS[player.id]) || (S.era==='nostalgia' && HOF_NOSTALGIA_NAMES && HOF_NOSTALGIA_NAMES[player.name]))) {
+  if (({deadball:1,golden:1,postwar:1,nostalgia:1,negro:1}[S.era]) && ((HOF_PLAYERS && HOF_PLAYERS[player.id]) || (S.era==='nostalgia' && HOF_NOSTALGIA_NAMES && HOF_NOSTALGIA_NAMES[player.name]))) {
     html += '<span class="award-badge award-hof" title="Hall of Fame">'+_svgPlaque(14)+'</span>';
   }
   return html;
@@ -4694,7 +4805,7 @@ function _slotBadgesHtml(slot) {
     if (slot.awards.asg) bdg += '<span class="fl-award-badge">'+_svgStar(14)+'</span>';
     if (slot.awards.ss)  bdg += '<span class="fl-award-badge">'+_svgBall(14)+'</span>';
   }
-  if (({deadball:1,golden:1,postwar:1,nostalgia:1}[S.era])
+  if (({deadball:1,golden:1,postwar:1,nostalgia:1,negro:1}[S.era])
       && ((HOF_PLAYERS && HOF_PLAYERS[slot.player.id])
           || (S.era === 'nostalgia' && HOF_NOSTALGIA_NAMES && HOF_NOSTALGIA_NAMES[slot.player.name]))) {
     bdg += '<span class="fl-award-badge">'+_svgPlaque(14)+'</span>';
@@ -4855,8 +4966,17 @@ var LAHMAN_LOGO = {
   NY1:'sfg'
 };
 
+// The Negro Leagues era is Lahman-backed like the other historical eras, just
+// from a different table — so it rides every existing `isLahman` branch and
+// only the source lookup has to know the difference.
+function _lahmanSource() {
+  if (_isNegroEra() && typeof NEGRO_DATA !== 'undefined') return NEGRO_DATA;
+  return (typeof LAHMAN_DATA !== 'undefined') ? LAHMAN_DATA : null;
+}
+
 function getLahmanTeams(year) {
-  var d = (typeof LAHMAN_DATA !== 'undefined') && LAHMAN_DATA[year];
+  var src = _lahmanSource();
+  var d = src && src[year];
   if (!d) return [];
   return Object.keys(d).map(function(id) {
     return { id: id, name: d[id].name, abbr: d[id].abbr };
@@ -4864,7 +4984,8 @@ function getLahmanTeams(year) {
 }
 
 function getLahmanTeam(year, teamId) {
-  return (typeof LAHMAN_DATA !== 'undefined') && LAHMAN_DATA[year] && LAHMAN_DATA[year][teamId];
+  var src = _lahmanSource();
+  return src && src[year] && src[year][teamId];
 }
 
 function fetchRosterLahman(year, teamId) {
@@ -4875,6 +4996,9 @@ function fetchRosterLahman(year, teamId) {
     return {
       id: p.id,
       name: p.name,
+      // Present only on Negro Leagues team-seasons; simulate() reads it as the
+      // season length for durability and the 162-game scaling.
+      seasonG: team.seasonG || null,
       positions: (function(ps){ var out=[]; (ps&&ps.length?ps:['DH']).forEach(function(x){ if(x==='LF'||x==='CF'||x==='RF'){if(out.indexOf('OF')===-1)out.push('OF');}else{out.push(x);} }); return out; })(p.positions),
       stats: {
         avg: p.avg, obp: p.obp, slg: p.slg,
@@ -4916,9 +5040,27 @@ function fetchAwardsForLahmanYear(year) {
 // Fallback weights (modern average) — used when WOBA_WEIGHTS year lookup misses
 var WOBA_C = { bb:0.696, hbp:0.726, h1b:0.886, h2b:1.253, h3b:1.584, hr:2.034 };
 
+// ─── Era-aware season context ────────────────────────────────────────────────
+// The Negro Leagues ran alongside the white majors, so 1920-1948 exists in both
+// WOBA_WEIGHTS and SEASON_AVG with American/National League values. Scoring a
+// Negro Leagues player against those would measure him against a league he was
+// barred from. These two helpers route to the Negro Leagues' own context
+// instead, which is what makes wOBA+ mean anything here.
+function _isNegroEra() {
+  return !!(ERA_CONFIG[S.era] && ERA_CONFIG[S.era].negro);
+}
+function _wobaWeights(year) {
+  if (_isNegroEra() && typeof NEGRO_WOBA !== 'undefined' && NEGRO_WOBA[year]) return NEGRO_WOBA[year];
+  return (WOBA_WEIGHTS && WOBA_WEIGHTS[year]) || null;
+}
+function _seasonAvg(year) {
+  if (_isNegroEra() && typeof NEGRO_SEASON_AVG !== 'undefined' && NEGRO_SEASON_AVG[year]) return NEGRO_SEASON_AVG[year];
+  return SEASON_AVG[year] || null;
+}
+
 function playerWOBA(st, year) {
-  var c = (year && WOBA_WEIGHTS && WOBA_WEIGHTS[year]) ||
-          (WOBA_WEIGHTS && S.spin && WOBA_WEIGHTS[S.spin.year]) || WOBA_C;
+  var c = (year && _wobaWeights(year)) ||
+          (S.spin && _wobaWeights(S.spin.year)) || WOBA_C;
   var bb  = st.bb  || 0;
   var hbp = st.hbp || 0;
   var sf  = st.sf  || 0;
@@ -4965,14 +5107,24 @@ function simulate() {
     var slot = S.lineup[i];
     if (!slot) continue;
     var st  = slot.player.stats;
-    var sea = SEASON_AVG[slot.year] || SEASON_AVG[2019];
+    var sea = _seasonAvg(slot.year) || SEASON_AVG[2019];
+
+    // Season length. Only Negro Leagues players carry a seasonG — their
+    // schedules ran 40-100 documented games and varied by team within a year,
+    // so a fixed 162 would treat every one of them as a part-timer. Every
+    // other era keeps the 162 it was calibrated against.
+    var seasonG = slot.player.seasonG || 162;
+    // How much of a full modern season this player's totals represent. Used to
+    // put counting stats on a 162-game footing so one set of ceilings works
+    // across schedules; 1 for every era but the Negro Leagues.
+    var scale = 162 / seasonG;
 
     // Durability: sqrt curve — regresses above-average rate performance toward the mean
-    var dur = Math.sqrt(Math.min(st.games, 162) / 162);
+    var dur = Math.sqrt(Math.min(st.games, seasonG) / seasonG);
 
     // wOBA: durability-adjusted. League-average wOBA ≈ league OBP (by wOBA construction)
     var woba    = playerWOBA(st, slot.year);
-    var yw      = (WOBA_WEIGHTS && WOBA_WEIGHTS[slot.year]) || {};
+    var yw      = _wobaWeights(slot.year) || {};
     var seaWoba = yw.lgWoba || sea.obp;
     var wobaAdj = seaWoba + (woba - seaWoba) * dur;
     wobaS += wobaAdj;
@@ -4983,14 +5135,15 @@ function simulate() {
     // shared floor/ceiling works everywhere and no era needs hand-tuning.
     wobaPlusS += seaWoba ? wobaAdj / seaWoba : 1;
 
-    // Counting stats: raw totals scale naturally with games played
-    hr   += S.era === 'deadball' ? ((st.hr||0) + (st.h2b||0) + (st.h3b||0)) : st.hr;
-    tb   += st.tb || 0;
-    rbi  += st.rbi;
-    runs += st.runs;
-    sb   += st.sb;
+    // Counting stats: raw totals scale naturally with games played, then onto
+    // a 162-game footing (a no-op outside the Negro Leagues, where scale is 1).
+    hr   += (S.era === 'deadball' ? ((st.hr||0) + (st.h2b||0) + (st.h3b||0)) : st.hr) * scale;
+    tb   += (st.tb || 0) * scale;
+    rbi  += st.rbi * scale;
+    runs += st.runs * scale;
+    sb   += st.sb * scale;
     avgS += st.avg || 0; obpS += st.obp || 0; slgS += st.slg || 0;
-    totalGames += Math.min(st.games, 162);
+    totalGames += Math.min(st.games, seasonG) * scale;
     n++;
   }
 
@@ -4998,8 +5151,10 @@ function simulate() {
     woba: n ? wobaS/n : 0,
     wobaPlus: n ? wobaPlusS/n : 0,
     avg:  n ? avgS/n  : 0, obp: n ? obpS/n : 0, slg: n ? slgS/n : 0,
-    hr: hr, tb: tb, rbi: rbi, runs: runs, sb: sb,
-    games: totalGames
+    // Rounded because scaling to 162 games yields fractions; a no-op elsewhere.
+    hr: Math.round(hr), tb: Math.round(tb), rbi: Math.round(rbi),
+    runs: Math.round(runs), sb: Math.round(sb),
+    games: Math.round(totalGames)
   };
 
   var roidsCount = 0;
@@ -5046,10 +5201,11 @@ function applyEraTheme(era) {
     nostalgia:{ bg:'#0a1410', surface:'#0e1c14', surface2:'#132018', border:'#1e3224', borderLt:'#2a4430', muted:'#5e7862' },
     postwar:  { bg:'#061414', surface:'#0c1e1e', surface2:'#102828', border:'#1a3838', borderLt:'#224e4e', muted:'#4a7272' },
     golden:   { bg:'#160c02', surface:'#221206', surface2:'#2e1a0a', border:'#4e3010', borderLt:'#664018', muted:'#8a6428' },
+    negro:    { bg:'#14100c', surface:'#1f1a13', surface2:'#2a231a', border:'#45392b', borderLt:'#5d4d3a', muted:'#93826a' },
     deadball: { bg:'#150808', surface:'#1e1010', surface2:'#271616', border:'#3c2020', borderLt:'#502c2c', muted:'#8a5048' }
   };
   var t = themes[era] || themes.modern;
-  document.body.classList.remove('era-modern','era-steroid','era-nostalgia','era-postwar','era-golden','era-deadball');
+  document.body.classList.remove('era-modern','era-steroid','era-nostalgia','era-postwar','era-golden','era-deadball','era-negro');
   if (era !== 'modern') document.body.classList.add('era-' + era);
   root.style.setProperty('--bg',        t.bg);
   root.style.setProperty('--surface',   t.surface);
@@ -5057,7 +5213,7 @@ function applyEraTheme(era) {
   root.style.setProperty('--border',    t.border);
   root.style.setProperty('--border-lt', t.borderLt);
   root.style.setProperty('--muted',     t.muted);
-  var _accents = {deadball:'#8B2030',golden:'#b08820',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
+  var _accents = {deadball:'#8B2030',golden:'#b08820',negro:'#A8794A',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
   root.style.setProperty('--era-accent', _accents[era] || '#2860c0');
 }
 
@@ -5082,6 +5238,11 @@ var _ERA_ZONES = [
   { era:'steroid',   emoji:'💉', name:'Juiced',     color:'#4C1D95', start:1995, end:2005 },
   { era:'modern',    emoji:'📊', name:'Modern',     color:'#1E3A5F', start:2005, end:2025 },
 ];
+// Not a member of _ERA_ZONES: those tile the timeline end to end, and this one
+// overlaps them by design. It gets its own track under the main one.
+var _NEGRO_ZONE = { era:'negro', emoji:'⭐', name:'Negro Leagues',
+                    color:'#6E5A3C', start:1920, end:1948 };
+
 var _TL_START = 1901, _TL_SPAN = 124; // 2025 - 1901
 
 function _tlPct(yr)  { return (yr - _TL_START) / _TL_SPAN * 100; }
@@ -5148,10 +5309,26 @@ function buildEraSlider() {
   }
   ticHtml += '</div>';
 
+  // The parallel track. It sits under the main one and spans the same years,
+  // which is the whole point: this league existed because those ones excluded
+  // its players.
+  var pz = _NEGRO_ZONE;
+  var pHtml = '<div class="era-parallel">'
+    + '<div class="era-parallel-rule" style="left:0;width:' + _tlPct(pz.start).toFixed(3) + '%"></div>'
+    + '<div class="era-parallel-rule" style="left:' + _tlPct(pz.end).toFixed(3) + '%;right:0"></div>'
+    + '<div class="era-parallel-zone' + (pz.era === _selectedEra ? ' era-zone-active' : '') + '"'
+    +   ' data-era="' + pz.era + '"'
+    +   ' style="left:' + _tlPct(pz.start).toFixed(3) + '%;width:'
+    +   ((pz.end - pz.start) / _TL_SPAN * 100).toFixed(3) + '%;background:' + pz.color + '"'
+    +   ' onclick="selectEraFromTab(\'' + pz.era + '\')">'
+    + '<span class="era-zone-emoji">' + pz.emoji + '</span>'
+    + '<span class="era-zone-name">' + pz.name + '</span>'
+    + '</div></div>';
+
   var initZ = _ERA_ZONES.filter(function(z){ return z.era === _selectedEra; })[0] || _ERA_ZONES[7];
   var hHtml = '<div class="era-slider-handle" id="era-slider-handle" style="left:'+_zoneMid(initZ).toFixed(3)+'%"></div>';
 
-  wrap.innerHTML = '<div class="era-slider">' + tHtml + hHtml + ticHtml + '</div>';
+  wrap.innerHTML = '<div class="era-slider">' + tHtml + hHtml + ticHtml + pHtml + '</div>';
   _bindSliderDrag(
     document.getElementById('era-slider-handle'),
     document.getElementById('era-slider-track')
@@ -5228,6 +5405,7 @@ function _bindSliderDrag(handle, track) {
 var _SNAP_DATA = [
   { era:'deadball',  emoji:'🪨', name:'Dead Ball',  years:'1901 – 1919', cls:'esc-card-deadball' },
   { era:'golden',    emoji:'🎩', name:'Golden Age', years:'1920 – 1942', cls:'esc-card-golden' },
+  { era:'negro',     emoji:'⭐', name:'Negro Leagues', years:'1920 – 1948', cls:'esc-card-negro' },
   { era:'postwar',   emoji:'⚾', name:'Post-War',   years:'1946 – 1968', cls:'esc-card-postwar' },
   { era:'nostalgia', emoji:'📺', name:'Hardball',   years:'1969 – 1993', cls:'esc-card-nostalgia' },
   { era:'steroid',   emoji:'💉', name:'Juiced',     years:'1995 – 2004', cls:'esc-card-steroid' },
@@ -5355,6 +5533,7 @@ var _ERA_DESCS = {
   steroid:  'McGwire hit 70. Sosa hit 66. Bonds hit 73. Nobody in the commissioner\'s office was asking too many questions. The most historically offensive stretch in baseball history — and we mean that both ways.',
   nostalgia:'From the Big Red Machine to the Iron Man. Rickey Henderson stole bases before you could blink, Tony Gwynn made .300 look like a down year, and the stolen base was a legitimate weapon of war. Your dad\'s game at its absolute finest.',
   postwar: 'Baseball at its most iconic. Jackie Robinson changed everything in \'47. Willie Mays in center, Mickey Mantle in the Bronx, Hank Aaron in Milwaukee — three all-timers playing the same era at the same time. Maris chased the immortal 60 until he broke it. Every legend you\'ve ever heard of lived right here.',
+  negro:    'Barred from the white major leagues, Black players built leagues of their own — and the baseball was extraordinary. Josh Gibson hit .466 in 1943. Oscar Charleston, Cool Papa Bell, Turkey Stearnes and Buck Leonard played here, and so did a teenage Willie Mays. MLB made these statistics official in 2024; they were reconstructed from box scores in the Black press, and the record is still growing as more are found.',
   golden:   'Babe Ruth didn\'t just change baseball — he invented a new sport. The home run went from a novelty to the whole show, and the Bambino hit them farther than anyone thought possible. Lou Gehrig, Rogers Hornsby, Jimmie Foxx — the game\'s first true power era, played in wool and cap.',
   deadball: 'No one hit home runs. Instead, they stole bases, played inside ball, and scratched out runs one at a time. Ty Cobb hit .420 and started fights at the same time. Honus Wagner was the best player in baseball and nobody could explain exactly how. Pitchers owned the world — until Ruth showed up and ended it all.'
 };
@@ -5420,7 +5599,7 @@ function isEligibleAt(player, pos) {
   return player.positions.indexOf(pos) !== -1;
 }
 function slotLabel(pos) {
-  var lahmanEras = {deadball:1,golden:1,postwar:1,nostalgia:1};
+  var lahmanEras = {deadball:1,golden:1,postwar:1,nostalgia:1,negro:1};
   if (lahmanEras[S.era] && (pos === 'LF' || pos === 'CF' || pos === 'RF')) return 'OF';
   return pos;
 }
@@ -6038,7 +6217,7 @@ function cancelAssign() {
 function buildBtnHtml(p, i, movingPlayer) {
   var btnHtml = '';
   var pa = S.pendingAssign;
-  var collapseOF = !!{deadball:1,golden:1,postwar:1,nostalgia:1}[S.era];
+  var collapseOF = !!{deadball:1,golden:1,postwar:1,nostalgia:1,negro:1}[S.era];
   if (movingPlayer && p.id === movingPlayer.id) {
     var moveSlots = moveSlotsFor(p, S.movingSlotIdx);
     var addedOFlabel = false;
@@ -6622,15 +6801,6 @@ function showResults() {
   document.getElementById('result-tagline').textContent = tagline;
 
   var SC = ERA_SCORING[S.era || 'modern'];
-  function _normStat(val, floor, ceil) { return Math.min(Math.max((val-floor)/(ceil-floor),0),1); }
-  function _playerScore(st) {
-    var s = SC; var w = playerWOBA(st);
-    return s.W.woba*_normStat(w,s.FLOOR.woba,s.CEIL.woba)
-          +s.W.hr*_normStat(st.hr,s.FLOOR.hr/9,s.CEIL.hr/9)
-          +s.W.rbi*_normStat(st.rbi,s.FLOOR.rbi/9,s.CEIL.rbi/9)
-          +s.W.runs*_normStat(st.runs||0,s.FLOOR.runs/9,s.CEIL.runs/9)
-          +s.W.sb*_normStat(st.sb,s.FLOOR.sb/9,s.CEIL.sb/9);
-  }
   function _tierCol(ops) { return ops>=1.0?'#c9a44a':ops>=.870?'#7abaff':ops>=.800?'#4caf76':ops>=.720?'#e09050':'#c07070'; }
 
   // ── Tab 1: Lineup ─────────────────────────────────────────────────────────
@@ -6844,6 +7014,26 @@ function showResults() {
       +chip((a.rbi/9).toFixed(1),  'RBI', 'var(--cream)')
       +chip((a.sb/9).toFixed(1),   'SB',  'var(--cream)')
       +'</div>';
+  })();
+
+  // Say plainly that these totals are projections. Negro Leagues schedules ran
+  // 40-100 documented games and varied by team, so counting stats are put on a
+  // 162-game footing to be comparable with the other eras — which means the
+  // numbers above are not what these men are recorded as having done.
+  (function() {
+    var el = document.getElementById('scale-note');
+    if (!el) return;
+    if (!_isNegroEra()) { el.style.display = 'none'; return; }
+    var spans = [];
+    for (var i = 0; i < 9; i++) {
+      var sl = S.lineup[i];
+      if (sl && sl.player && sl.player.seasonG) spans.push(sl.player.seasonG);
+    }
+    if (!spans.length) { el.style.display = 'none'; return; }
+    spans.sort(function(a, b){ return a - b; });
+    el.innerHTML = 'Totals scaled to a 162-game season &middot; these nine played '
+      + spans[0] + '&ndash;' + spans[spans.length - 1] + ' recorded games';
+    el.style.display = '';
   })();
 
 
@@ -7107,10 +7297,10 @@ function decodeLineup(str) {
 function showSharedLineup(data) {
   if (!data || data.v !== 1 || !Array.isArray(data.s)) return;
   var POS_NAMES = ['C','1B','2B','3B','SS','LF','CF','RF','DH'];
-  var _lahmanErasShared = {deadball:1,golden:1,postwar:1,nostalgia:1};
+  var _lahmanErasShared = {deadball:1,golden:1,postwar:1,nostalgia:1,negro:1};
   function _posLbl(pos) { return (_lahmanErasShared[data.e] && (pos==='LF'||pos==='CF'||pos==='RF')) ? 'OF' : pos; }
-  var ERA_NAMES = { modern:'Modern Era', steroid:'Juiced Era', nostalgia:'Hardball Era',
-                    postwar:'Post-War Era', golden:'Golden Age', deadball:'Dead Ball Era' };
+  var ERA_NAMES = { modern:'Modern Era', steroid:'Juiced Era', nostalgia:'Hardball Era', negro:'Negro Leagues',
+                    postwar:'Post-War Era', golden:'Golden Age', deadball:'Dead Ball Era', negro:'Negro Leagues' };
   var losses = 162 - (data.w || 0);
   var html = '<div class="shared-card">';
   html += '<div class="shared-header"><div>';
@@ -7155,8 +7345,8 @@ buildEraSnap();
 // move auto-submits on completion (prevents replay-until-you-win).
 var _vsChallenge = null, _vsChallengeId = null, _vsDuel = null;
 var _h2hOwnWaiting = null, _h2hNotice = null, _h2hSubmitState = null;
-var _ERA_ACCENTS = {deadball:'#8B2030',golden:'#b08820',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
-var _ERA_LBL = {modern:'Modern',steroid:'Juiced',nostalgia:'Hardball',postwar:'Post-War',golden:'Golden Age',deadball:'Dead Ball'};
+var _ERA_ACCENTS = {deadball:'#8B2030',golden:'#b08820',negro:'#A8794A',postwar:'#1080a0',nostalgia:'#208050',steroid:'#8030c0',modern:'#2860c0'};
+var _ERA_LBL = {negro:'Negro Leagues',modern:'Modern',steroid:'Juiced',nostalgia:'Hardball',postwar:'Post-War',golden:'Golden Age',deadball:'Dead Ball'};
 
 // ── Local game list ──
 function _h2hGames() { try { return JSON.parse(localStorage.getItem('mr-h2h-games')||'[]'); } catch(e) { return []; } }
@@ -7385,7 +7575,7 @@ function _fmtOps(v){ return v ? (+v).toFixed(3) : '—'; }
 
 function _vsRows(mySlots, theirSlots, myDecoded, myEra, theirEra) {
   var rows = '';
-  var lahmanEras = {deadball:1,golden:1,postwar:1,nostalgia:1};
+  var lahmanEras = {deadball:1,golden:1,postwar:1,nostalgia:1,negro:1};
   for (var i = 0; i < 9; i++) {
     var ms = mySlots[i], ts = theirSlots ? theirSlots[i] : null;
     var mo = ms ? (myDecoded?(+(ms.ob||0) + +(ms.sl||0)):(+(ms.player.stats.obp||0) + +(ms.player.stats.slg||0))) : 0;
@@ -7877,6 +8067,7 @@ function setLineupView(view) {
 
 </script>
 <script src="lahman_data.js"></script>
+<script src="negro_data.js"></script>
 <script src="lahman_awards_data.js"></script>
 <script src="woba_weights.js"></script>
 <div id="duel-modal" style="display:none" class="duel-modal-overlay" onclick="_closeDuelModal(event)"><div class="duel-modal-card"><button class="duel-modal-close" onclick="_closeDuelModal()">&#x2715;</button><div id="duel-modal-content"></div></div></div>

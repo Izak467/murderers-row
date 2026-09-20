@@ -3,7 +3,7 @@
 ## Project overview
 
 **Site:** murderers-row.net (GitHub Pages, CNAME in repo root)
-**Repo:** `C:\Users\ischwartz\162-0-repo\`
+**Repo:** `~/murderers-row` (macOS)
 **Stack:** Single-file vanilla JS/CSS/HTML — everything lives in `index.html`. No frameworks, no build step.
 **Deployment:** Push to `main` → GitHub Pages auto-deploys. Commit + push is all that's needed.
 
@@ -11,13 +11,43 @@
 
 ## File editing rules (CRITICAL)
 
-- **All edits via PowerShell** using `[System.IO.File]::ReadAllText/WriteAllText` with `[System.Text.Encoding]::UTF8`. The Edit tool is unreliable on this file due to Unicode and CRLF line endings.
-- **Validate after every edit:** `grep -Pc '\r\n' index.html` must return 0 (no literal `\r\n` contamination).
-- Never let `[regex]::Escape()` output land as literal file content — always validate with grep after.
+- The repo now lives on macOS and `.gitattributes` enforces LF, so the Edit tool
+  is fine. The old PowerShell-only rule was a Windows-era workaround.
+- **Validate after every edit:** `grep -c $'\r' index.html` must return 0, and
+  extract the last inline `<script>` block and `node --check` it. Everything is
+  one file; a syntax error takes the whole game down.
+- Never let escape artifacts from a scripted replace land as file content.
 
 ---
 
-## Current eras (live — MLB Stats API backed)
+## Eras — all seven are live
+
+| Era key | Name | Years | Data source |
+|---|---|---|---|
+| `modern` | Modern Era | 2005–2025 | MLB Stats API |
+| `steroid` | Juiced Era | 1995–2004 | MLB Stats API |
+| `nostalgia` | Hardball Era | 1969–1993 | MLB Stats API |
+| `postwar` | Post-War Era | 1946–1968 | `lahman_data.js` |
+| `golden` | Golden Age | 1920–1942 | `lahman_data.js` |
+| `deadball` | Dead Ball Era | 1901–1919 | `lahman_data.js` |
+| `negro` | Negro Leagues | 1920–1948 | `negro_data.js` |
+
+`ERA_CONFIG[era].lahman` routes an era to static data; `.negro` additionally
+points `_lahmanSource()` at `NEGRO_DATA` and `_wobaWeights()`/`_seasonAvg()` at
+the Negro Leagues' own league context. See BALANCE.md for why that matters and
+for the season-length handling unique to that era. Regenerate its data with
+`preprocess_negro.py <lahman-csv-dir> negro_data.js`.
+
+## Historical note on the sections below
+
+Everything from here down was written when only three eras existed and the
+Lahman ones were still planned. Treat it as history: the questions it poses
+about spin mechanics, position eligibility and pre-1969 awards were all
+answered when those eras shipped.
+
+## Original notes (three-era period)
+
+### Current eras (live — MLB Stats API backed)
 
 | Era key | Name | Year pool | Notes |
 |---|---|---|---|

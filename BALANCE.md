@@ -193,3 +193,59 @@ Recalibrating changed everyone's scores. Existing personal bests and any live
 leaderboard entries are not comparable to new ones. `pb_*` fields live in
 `users/{uid}` and daily scores in the per-era collections; neither is versioned
 by scoring formula.
+
+---
+
+## Negro Leagues (added 2026-09-20)
+
+Calibrated the same way: greedy play, ceilings set to a measured percentile,
+percentile chosen so the mean lands on target.
+
+| era | mean | target | 162-rate | saturated axes |
+|---|---|---|---|---|
+| Negro Leagues | 110.0 | 110 | 0.44% | none |
+
+Ceilings are **p90** — a lower percentile than the other eras need, because
+this era's spread is wider (sd 24 against 13-23 elsewhere). That spread is
+real and comes from the source: seasons ran 40-100 documented games, and
+scaling a 45-game season onto 162 multiplies its noise along with its totals.
+
+Two things work differently here, both forced by the data:
+
+**Season length is per team-season.** Every other era is scored against 162.
+Negro Leagues schedules varied by team within a year, so each team-season
+carries a `seasonG` -- its best-documented games played -- and durability is
+`sqrt(min(g, seasonG) / seasonG)` against that. Team games from Lahman's Teams
+table are *not* usable: the readme is explicit that player stats count games
+against all opponents while team records are league-only, so team games
+undercount. Nothing outside this era has a `seasonG`, so nothing outside this
+era changed.
+
+**Counting stats are scaled to 162** by `162 / seasonG`, per player, since a
+lineup draws nine different team-seasons. This is what lets one set of ceilings
+work across schedules. Roster cards during the draft show raw totals; the
+results card shows the scaled aggregate and says so.
+
+**wOBA+ is measured against Negro Leagues play.** 1920-1948 exists in
+`WOBA_WEIGHTS` with AL/NL values, and using those would score these players
+against a league they were barred from. `NEGRO_WOBA` carries league-average
+wOBA computed from this data instead (.324-.370 across the span). The linear
+weights are the same-year FanGraphs values -- those track the decade's run
+environment and are a reasonable borrow; the league average is not.
+
+### Threshold
+
+Players qualify at `G >= 0.40 * seasonG` and `AB >= 20`, not a flat at-bat cut.
+The recovery of these statistics is ongoing, so a flat threshold would quietly
+punish the teams whose box scores are least recovered. The fraction also floors
+durability at 0.63 for anyone draftable. Result: a median of 11 players per
+team-season, p10 of 9, and 2% of team-seasons unable to field the core
+positions.
+
+### Open
+
+- The perfect-season rate (0.44%) is the highest of the seven eras. Inherent to
+  the variance above; lowering it means lowering the mean.
+- No awards. The East-West Game was the biggest Black sporting event in America
+  and the All-Star data is in Lahman's `AllstarFull` -- badges for it would be
+  a real addition.
