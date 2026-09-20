@@ -8,15 +8,17 @@ service cloud.firestore {
     match /{coll}/{docId} {
       allow read: if request.auth != null
         && coll in ['scores','scores_steroid','scores_nostalgia',
-                    'scores_postwar','scores_golden','scores_deadball',
+                    'scores_postwar','scores_golden','scores_deadball','scores_negro',
                     'hardScores','hardScores_steroid','hardScores_nostalgia',
-                    'hardScores_postwar','hardScores_golden','hardScores_deadball'];
+                    'hardScores_postwar','hardScores_golden','hardScores_deadball',
+                    'hardScores_negro'];
 
       allow create: if request.auth != null
         && coll in ['scores','scores_steroid','scores_nostalgia',
-                    'scores_postwar','scores_golden','scores_deadball',
+                    'scores_postwar','scores_golden','scores_deadball','scores_negro',
                     'hardScores','hardScores_steroid','hardScores_nostalgia',
-                    'hardScores_postwar','hardScores_golden','hardScores_deadball']
+                    'hardScores_postwar','hardScores_golden','hardScores_deadball',
+                    'hardScores_negro']
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.wins is int
         && request.resource.data.wins >= 0
